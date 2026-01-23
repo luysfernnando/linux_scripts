@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecret
+      TZ: America/Sao_Paulo
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+
+    # shm grande ajuda sorts/hash/queries pesadas (evita fallback lento)
+    shm_size: "1gb"
+
+    command: >
+      postgres
+      -c max_connections=30
+      -c shared_buffers=2GB
+      -c effective_cache_size=20GB
+      -c work_mem=32MB
+      -c maintenance_work_mem=512MB
+      -c wal_buffers=16MB
+      -c checkpoint_timeout=15min
+      -c checkpoint_completion_target=0.9
+      -c max_wal_size=8GB
+      -c min_wal_size=2GB
+      -c wal_compression=on
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c default_statistics_target=200
+      -c synchronous_commit=on
+      -c log_min_duration_statement=200ms
+      -c log_checkpoints=on
+
+    volumes:
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
