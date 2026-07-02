@@ -134,11 +134,14 @@ if yay -Syu --noconfirm && \
    sudo npm install -g npm@latest && \
    sudo npm update -g && \
    { pacman -Qtdq | xargs -r sudo pacman -Rns --noconfirm; } && \
-   sudo paccache -r && \
+   yes | sudo paccache -r && \
+   fwupdmgr refresh --force && \
+   fwupdmgr update --no-reboot-check -y && \
+   bun upgrade && \
 then \
     end=$(date +%s); \
     duration=$((end - start)); \
-    notify-send "Update Completo" "Sistema, NPM, Composer e Docker limpos em ${duration}s" -i system-software-update; \
+    notify-send "Update Completo" "Sistema, NPM, Composer, Firmware e Docker limpos em ${duration}s" -i system-software-update; \
 else \
     notify-send "Erro no Update" "Verifique o terminal para detalhes" -i dialog-error; \
 fi'
