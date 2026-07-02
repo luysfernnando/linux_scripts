@@ -81,8 +81,9 @@ alias gl='git log --oneline --graph --decorate --all'
 
 #alias serve='php -S localhost:8000'
 #alias artisan='php artisan'
-alias dev='npm run dev'
-#alias npmbuild='npm run build'
+alias dev='bun run dev'
+alias build='bun run build'
+alias bunx='bunx'
 #alias nvim='nvim'
 
 # Corrije o Clear do terminal Kitty
