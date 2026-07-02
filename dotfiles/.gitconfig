@@ -1,0 +1,21 @@
+[user]
+	email = luysfernnando@gmail.com
+	name = Luys Fernnando
+	signingKey = 94E158175670588AB2249D36B8F70BDF381C7103
+[gpg]
+	format = openpgp
+[gpg "ssh"]
+	program = ssh-keygen
+[commit]
+	gpgSign = true
+[tag]
+	forceSignAnnotated = true
+[core]
+	editor = code --wait
+	autocrlf = input
+[pull]
+	rebase = true
+[push]
+	autoSetupRemote = true
+[init]
+	defaultBranch = main

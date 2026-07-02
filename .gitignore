@@ -1,2 +1,5 @@
 # Ignore Windows file system alternate data streams
 *Zone.Identifier
+
+# Backups gerados pelo install.sh
+dotfiles/*.bak
