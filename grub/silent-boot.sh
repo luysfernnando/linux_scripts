@@ -11,7 +11,6 @@ need() {
 }
 
 need grub-mkconfig
-need python3
 need sed
 
 if [[ $EUID -ne 0 ]]; then
@@ -22,31 +21,21 @@ fi
 echo "[1/5] GRUB_TIMEOUT_STYLE menu -> hidden"
 sed -i 's/^GRUB_TIMEOUT_STYLE=menu/GRUB_TIMEOUT_STYLE=hidden/' /etc/default/grub
 
-echo "[2/5] patch /etc/grub.d/10_linux (comentar echo de Loading Linux / Loading initial ramdisk)"
-cp /etc/grub.d/10_linux /etc/grub.d/10_linux.bak
-python3 - <<'PYEOF'
-path = "/etc/grub.d/10_linux"
-with open(path) as f:
-    lines = f.readlines()
-
-out = []
-skip_next_echo = False
-for line in lines:
-    stripped = line.strip()
-    if 'gettext_printf "Loading Linux' in line or 'gettext_printf "Loading initial ramdisk' in line:
-        out.append(line)
-        skip_next_echo = True
-        continue
-    if skip_next_echo and stripped.startswith('echo'):
-        indent = line[:len(line) - len(line.lstrip())]
-        out.append(f"{indent}: #{stripped}\n")
-        skip_next_echo = False
-        continue
-    out.append(line)
-
-with open(path, "w") as f:
-    f.writelines(out)
-PYEOF
+echo "[2/5] patch /etc/grub.d/10_linux (esvazia a mensagem de Loading Linux / Loading initial ramdisk)"
+# Nao dá pra comentar a linha "echo" direto: ela vive dentro de um heredoc
+# (<< EOF ... EOF) que vira texto literal do grub.cfg. Comentar ali corrompe
+# a sintaxe do script GRUB gerado. O jeito seguro é esvaziar a variável
+# $message ANTES do heredoc — o heredoc então emite "echo ''" (linha em
+# branco), sem quebrar a estrutura.
+# só faz backup se o arquivo atual ainda for o original (pristine) —
+# evita sobrescrever o backup com uma versão já patchada em reruns
+if grep -q 'gettext_printf "Loading Linux %s' /etc/grub.d/10_linux; then
+    cp /etc/grub.d/10_linux /etc/grub.d/10_linux.bak
+fi
+sed -i \
+    -e 's/message="\$(gettext_printf "Loading Linux %s \.\.\." \${version})"/message=""/' \
+    -e 's/message="\$(gettext_printf "Loading initial ramdisk \.\.\.")"/message=""/' \
+    /etc/grub.d/10_linux
 
 echo "[3/5] EnableWallMessages=no em /etc/systemd/logind.conf"
 if grep -q "^\[Login\]" /etc/systemd/logind.conf; then
