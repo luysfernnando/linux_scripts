@@ -23,6 +23,7 @@ Read the top of each script for dependencies and options before running — most
 |---|---|
 | `docker/install-docker.sh` | apt update → get.docker.com install → add user to docker group → reboot |
 | `docker/postgres/docker-compose.yml` | Local Postgres tuned for heavy queries (2GB shared_buffers, NVMe settings) |
+| `grub/silent-boot.sh` | Esconde menu do GRUB e mensagens de loading, silencia wall broadcast no shutdown, deixa o Plymouth assumir a tela. Precisa `sudo`. Re-rodar após updates do pacote `grub` (sobrescreve `/etc/grub.d/10_linux`). |
 
 GitKraken e Tidewave foram portados pro Go — ver `sysup gitkraken` / `sysup tidewave` na seção `sysup` abaixo (os `.sh` antigos foram removidos).
 
