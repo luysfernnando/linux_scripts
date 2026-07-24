@@ -16,6 +16,8 @@ func main() {
 	rest := args[1:]
 
 	switch cmd {
+	case "version", "--version", "-v":
+		fmt.Println("sysup", version)
 	case "update":
 		dryRun := false
 		noSelfUpdate := false
@@ -51,7 +53,7 @@ func main() {
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "uso: sysup [update|mirrors|schedule|gitkraken|tidewave] [--dry-run] [--no-self-update]\n")
+		fmt.Fprintf(os.Stderr, "uso: sysup [update|mirrors|schedule|gitkraken|tidewave|version] [--dry-run] [--no-self-update]\n")
 		os.Exit(2)
 	}
 }

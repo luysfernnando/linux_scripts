@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: sysup/go.mod
+          cache-dependency-path: sysup/go.sum
 
       - uses: goreleaser/goreleaser-action@v6
         with:
