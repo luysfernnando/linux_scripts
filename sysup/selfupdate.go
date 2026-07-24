@@ -37,19 +37,19 @@ func SelfUpdate(dryRun bool) bool {
 
 	current, err := semver.Parse(strings.TrimPrefix(version, "v"))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "aviso: versão embutida inválida, pulando self-update:", err)
+		fmt.Fprintln(os.Stderr, warn("aviso: versão embutida inválida, pulando self-update: "+err.Error()))
 		return false
 	}
 
 	latest, err := selfupdate.UpdateSelf(current, repoSlug)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "aviso: self-update falhou, seguindo com a versão atual:", err)
+		fmt.Fprintln(os.Stderr, warn("aviso: self-update falhou, seguindo com a versão atual: "+err.Error()))
 		return false
 	}
 	if latest.Version.Equals(current) {
 		return false
 	}
-	fmt.Printf("==> sysup atualizado: %s -> %s\n", version, latest.Version)
+	fmt.Println(header("==> sysup atualizado: %s -> %s", version, latest.Version))
 	return true
 }
 
@@ -76,12 +76,12 @@ func TryUpdateDotfilesRepo(dryRun bool) {
 	}
 
 	line := fmt.Sprintf("git -C %s pull --ff-only", repo)
-	fmt.Printf("==> repo dotfiles: %s\n", line)
+	fmt.Println(dim("==> repo dotfiles: " + line))
 	if dryRun {
 		return
 	}
 	if err := exec.Command("git", "-C", repo, "pull", "--ff-only").Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "aviso: git pull do repo dotfiles falhou:", err)
+		fmt.Fprintln(os.Stderr, warn("aviso: git pull do repo dotfiles falhou: "+err.Error()))
 	}
 }
 

@@ -81,7 +81,7 @@ func runUpdate(dryRun, noSelfUpdate bool) {
 	start := time.Now()
 	family := DetectFamily()
 	tools := DetectTools()
-	fmt.Printf("==> sysup update (%s)\n", family)
+	fmt.Println(header("==> sysup update (%s)", family))
 
 	parallelSteps, cleanupSteps := BuildPipeline(family, tools)
 	if dueForMirrorCheck() {
@@ -91,21 +91,46 @@ func runUpdate(dryRun, noSelfUpdate bool) {
 		parallelSteps = append([]Step{mirrorCheck}, parallelSteps...)
 	}
 
-	failed, err := RunParallel(parallelSteps, dryRun)
+	results, err := RunParallel(parallelSteps, dryRun)
+
 	if err == nil {
 		for i := range cleanupSteps {
 			s := &cleanupSteps[i]
-			if runErr := s.Run(dryRun, os.Stdout); runErr != nil {
-				failed, err = s, runErr
+			cstart := time.Now()
+			runErr := s.Run(dryRun, os.Stdout)
+			cdur := time.Since(cstart)
+			results = append(results, StepResult{Name: s.Name, Dur: cdur, Err: runErr})
+			if runErr != nil {
+				err = runErr
 				break
 			}
 		}
 	}
 
 	elapsed := time.Since(start).Round(time.Second)
+
+	if !dryRun {
+		fmt.Println()
+		fmt.Println(header("==> resumo"))
+		for _, r := range results {
+			status := ok("✔ ok")
+			if r.Err != nil {
+				status = fail("✘ falhou")
+			}
+			fmt.Printf("  %-42s %s  %s\n", r.Name, status, dim(r.Dur.Round(time.Millisecond).String()))
+		}
+	}
+
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "erro em %q: %v\n", failed.Name, err)
-		Notify("Erro no update", fmt.Sprintf("Falhou em: %s", failed.Name))
+		failedName := "desconhecido"
+		for _, r := range results {
+			if r.Err != nil {
+				failedName = r.Name
+				break
+			}
+		}
+		fmt.Fprintf(os.Stderr, "%s %q: %v\n", fail("erro em"), failedName, err)
+		Notify("Erro no update", fmt.Sprintf("Falhou em: %s", failedName))
 		os.Exit(1)
 	}
 	Notify("Update completo", fmt.Sprintf("Sistema atualizado e limpo em %s", elapsed))

@@ -36,7 +36,7 @@ type Step struct {
 // strings because most of them are already "cmd1 && cmd2"-style pipelines
 // ported straight from the old .zshrc aliases.
 func runShell(dryRun bool, line string, out io.Writer) error {
-	fmt.Fprintf(out, "==> %s\n", line)
+	fmt.Fprintln(out, dim("==> "+line))
 	if dryRun {
 		return nil
 	}
@@ -154,37 +154,48 @@ func BuildPipeline(family Family, t Tools) (parallel []Step, cleanup []Step) {
 	return parallel, cleanup
 }
 
-// prefixWriter line-buffers writes and emits each line prefixed with a step
-// name, serialized through a shared mutex — needed so concurrent steps'
-// output doesn't interleave mid-line into unreadable garbage.
+// prefixWriter line-buffers writes and emits each line prefixed with a
+// colored step name, serialized through a shared mutex — needed so
+// concurrent steps' output doesn't interleave mid-line into unreadable
+// garbage.
 type prefixWriter struct {
-	name string
-	mu   *sync.Mutex
-	buf  []byte
+	name  string
+	color string
+	mu    *sync.Mutex
+	buf   []byte
 }
 
 func (w *prefixWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.buf = append(w.buf, p...)
+	tag := colorize(w.color, "["+w.name+"]")
 	for {
 		i := bytes.IndexByte(w.buf, '\n')
 		if i < 0 {
 			break
 		}
-		fmt.Printf("[%s] %s\n", w.name, w.buf[:i])
+		fmt.Printf("%s %s\n", tag, w.buf[:i])
 		w.buf = w.buf[i+1:]
 	}
 	return len(p), nil
+}
+
+// StepResult records how one pipeline step went, for the end-of-run summary.
+type StepResult struct {
+	Name string
+	Dur  time.Duration
+	Err  error
 }
 
 // RunParallel primes sudo once against the real terminal (so it can
 // actually prompt, instead of the no-op it'd be against /dev/null), keeps
 // it alive for the duration, then runs steps: non-sudo steps all at once
 // in their own goroutines, sudo steps one at a time in a single dedicated
-// lane so no two sudo invocations ever run concurrently. Returns the first
-// error encountered, if any, plus which step it was.
-func RunParallel(steps []Step, dryRun bool) (failed *Step, err error) {
+// lane so no two sudo invocations ever run concurrently. Returns one
+// StepResult per step (same order as the input) plus the first error
+// encountered, if any.
+func RunParallel(steps []Step, dryRun bool) (results []StepResult, err error) {
 	if len(steps) == 0 {
 		return nil, nil
 	}
@@ -206,7 +217,7 @@ func RunParallel(steps []Step, dryRun bool) (failed *Step, err error) {
 		primeCmd.Stdout = os.Stdout
 		primeCmd.Stderr = os.Stderr
 		if err := primeCmd.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, "aviso: sudo -v falhou, passos que precisam de root podem pedir senha individualmente:", err)
+			fmt.Fprintln(os.Stderr, warn("aviso: sudo -v falhou, passos que precisam de root podem pedir senha individualmente: "+err.Error()))
 		}
 		done := make(chan struct{})
 		defer close(done)
@@ -225,10 +236,23 @@ func RunParallel(steps []Step, dryRun bool) (failed *Step, err error) {
 		}
 	}
 
-	errs := make([]error, len(steps))
+	results = make([]StepResult, len(steps))
 	run := func(i int) {
-		out := io.Writer(&prefixWriter{name: steps[i].Name, mu: &mu})
-		errs[i] = steps[i].Run(dryRun, out)
+		color := stepColor(i)
+		out := io.Writer(&prefixWriter{name: steps[i].Name, color: color, mu: &mu})
+		start := time.Now()
+		stepErr := steps[i].Run(dryRun, out)
+		dur := time.Since(start)
+		results[i] = StepResult{Name: steps[i].Name, Dur: dur, Err: stepErr}
+
+		mu.Lock()
+		tag := colorize(color, "["+steps[i].Name+"]")
+		if stepErr != nil {
+			fmt.Printf("%s %s (%s)\n", tag, fail("✘ falhou"), dur.Round(time.Millisecond))
+		} else if !dryRun {
+			fmt.Printf("%s %s (%s)\n", tag, ok("✔ concluído"), dur.Round(time.Millisecond))
+		}
+		mu.Unlock()
 	}
 
 	for _, i := range plainSteps {
@@ -249,12 +273,12 @@ func RunParallel(steps []Step, dryRun bool) (failed *Step, err error) {
 	}
 	wg.Wait()
 
-	for i, e := range errs {
-		if e != nil {
-			return &steps[i], e
+	for _, r := range results {
+		if r.Err != nil && err == nil {
+			err = r.Err
 		}
 	}
-	return nil, nil
+	return results, err
 }
 
 func sudoKeepAlive(done <-chan struct{}) {
