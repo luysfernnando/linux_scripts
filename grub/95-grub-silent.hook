@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = grub
+
+[Action]
+Description = Reaplicando patch de silent boot (grub/silent-boot.sh)...
+When = PostTransaction
+Exec = /usr/bin/bash /home/lulfex/Documentos/DEV/Study/Linux/linux_scripts/grub/silent-boot.sh

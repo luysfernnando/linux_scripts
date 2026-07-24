@@ -47,6 +47,12 @@ bash install.sh
 
 `install.sh` faz backup do arquivo original (`*.bak`) se não for symlink, depois cria o link. Linka `.zshrc`/`.bashrc`; se `fish` existir, garante a linha `source .../dotfiles/fish/config.fish` no `config.fish` local (idempotente). Instala `sysup` como **arquivo real** (não symlink) em `~/.local/bin/sysup`: primeiro tenta baixar o binário da última release do GitHub (funciona sem Go instalado — é o caminho pra quem só clona o repo numa máquina nova/de amigo); só compila do fonte (`go build`) como fallback, se o download falhar e `go` estiver disponível. Também grava `~/.config/sysup/repo-path` com o caminho do clone (usado pelo `sysup update` pra um `git pull` best-effort nos dotfiles). Adicionar novo dotfile pro bash/zsh: copiar pra `dotfiles/`, incluir o nome em `FILES` no `install.sh`. Pro fish: editar `dotfiles/fish/config.fish` direto.
 
+## Ricing
+
+`ricing/` guarda um snapshot do visual atual (KDE Plasma, kitty, oh-my-posh) pra restaurar depois numa reinstalação — não é symlinkado nem tocado pelo `dotfiles/install.sh` (diferente de `.zshrc`/`.bashrc`), é backup on-demand com passo a passo manual. Ver `ricing/README.md` pros comandos de restore (`kwriteconfig6`, `lookandfeeltool`, cópia de configs do kitty/oh-my-posh).
+
+Atualizar o snapshot: sobrescrever os arquivos em `ricing/` com o config atual da máquina e commitar. Adicionar novo item ricado (ex: outro terminal, outro tema): criar subpasta em `ricing/`, documentar restore no `ricing/README.md`.
+
 ## sysup (engine de update cross-distro/cross-OS, self-updating)
 
 `sysup/` é um módulo Go — binário único (`sysup update|mirrors|schedule|gitkraken|tidewave [--dry-run]`) que substitui os antigos scripts/aliases de update espalhados pelo repo. Distribuído como binário standalone (não depende do repo continuar clonado no disco — só os dotfiles em si dependem disso).
