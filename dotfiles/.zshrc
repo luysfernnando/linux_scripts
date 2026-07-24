@@ -126,26 +126,10 @@ alias lstree='lsd --tree' # Isso vai te dar o comportamento de 'tree' com ícone
 # ALIASES PARA PACMAN
 # ---------------------------
 
-#   docker system prune -f; \
-alias update='start=$(date +%s); \
-if yay -Syu --noconfirm && \
-   flatpak update -y && \
-   flatpak uninstall --unused -y && \
-   composer global update --no-interaction && \
-   sudo npm install -g npm@latest && \
-   sudo npm update -g && \
-   { pacman -Qtdq | xargs -r sudo pacman -Rns --noconfirm; } && \
-   yes | sudo paccache -r && \
-   fwupdmgr refresh --force && \
-   fwupdmgr update --no-reboot-check -y && \
-   bun upgrade && \
-then \
-    end=$(date +%s); \
-    duration=$((end - start)); \
-    notify-send "Update Completo" "Sistema, NPM, Composer, Firmware e Docker limpos em ${duration}s" -i system-software-update; \
-else \
-    notify-send "Erro no Update" "Verifique o terminal para detalhes" -i dialog-error; \
-fi'
+# update roda a engine sysup (detecta arch/debian/fedora/mac/windows sozinha)
+alias update='sysup update'
+alias mirrors='sysup mirrors'
+alias tidewave='sysup tidewave'
 alias install='sudo pacman -S'
 alias remove='sudo pacman -Rns'
 alias search='pacman -Ss'

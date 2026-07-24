@@ -3,3 +3,7 @@
 
 # Backups gerados pelo install.sh
 dotfiles/*.bak
+
+# Binário compilado do sysup (build local) e output do GoReleaser
+sysup/sysup
+dist/
