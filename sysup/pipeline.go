@@ -182,10 +182,13 @@ func (w *prefixWriter) Write(p []byte) (int, error) {
 }
 
 // StepResult records how one pipeline step went, for the end-of-run summary.
+// Output is only populated by the TUI runner (which captures each step's
+// combined stdout/stderr instead of streaming it live) — empty elsewhere.
 type StepResult struct {
-	Name string
-	Dur  time.Duration
-	Err  error
+	Name   string
+	Dur    time.Duration
+	Err    error
+	Output string
 }
 
 // RunParallel primes sudo once against the real terminal (so it can
@@ -200,29 +203,8 @@ func RunParallel(steps []Step, dryRun bool) (results []StepResult, err error) {
 		return nil, nil
 	}
 
-	hasSudoStep := false
-	for _, s := range steps {
-		if s.NeedsSudo {
-			hasSudoStep = true
-			break
-		}
-	}
-
-	if !dryRun && hasSudoStep {
-		// This priming call MUST be attached to the real terminal (not
-		// /dev/null, which is what exec.Cmd defaults to for unset
-		// Stdin/Stdout/Stderr) — otherwise it can never actually prompt.
-		primeCmd := exec.Command("sudo", "-v")
-		primeCmd.Stdin = os.Stdin
-		primeCmd.Stdout = os.Stdout
-		primeCmd.Stderr = os.Stderr
-		if err := primeCmd.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, warn("aviso: sudo -v falhou, passos que precisam de root podem pedir senha individualmente: "+err.Error()))
-		}
-		done := make(chan struct{})
-		defer close(done)
-		go sudoKeepAlive(done)
-	}
+	stopSudo := primeSudo(steps, dryRun)
+	defer stopSudo()
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -279,6 +261,35 @@ func RunParallel(steps []Step, dryRun bool) (results []StepResult, err error) {
 		}
 	}
 	return results, err
+}
+
+// primeSudo checks whether any step needs root and, if so, primes sudo's
+// credential cache against the real terminal (so it can actually prompt,
+// instead of the no-op it'd be against /dev/null) and keeps it alive with a
+// background ticker. Callers must invoke the returned stop func once done —
+// safe to call even when nothing was primed (steps have no sudo, or dryRun).
+func primeSudo(steps []Step, dryRun bool) (stop func()) {
+	hasSudoStep := false
+	for _, s := range steps {
+		if s.NeedsSudo {
+			hasSudoStep = true
+			break
+		}
+	}
+	if dryRun || !hasSudoStep {
+		return func() {}
+	}
+
+	primeCmd := exec.Command("sudo", "-v")
+	primeCmd.Stdin = os.Stdin
+	primeCmd.Stdout = os.Stdout
+	primeCmd.Stderr = os.Stderr
+	if err := primeCmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, warn("aviso: sudo -v falhou, passos que precisam de root podem pedir senha individualmente: "+err.Error()))
+	}
+	done := make(chan struct{})
+	go sudoKeepAlive(done)
+	return func() { close(done) }
 }
 
 func sudoKeepAlive(done <-chan struct{}) {
