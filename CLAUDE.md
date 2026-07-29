@@ -51,11 +51,33 @@ bash install.sh
 
 `ricing/` guarda um snapshot do visual atual (KDE Plasma, kitty, oh-my-posh) pra restaurar depois numa reinstalação — não é symlinkado nem tocado pelo `dotfiles/install.sh` (diferente de `.zshrc`/`.bashrc`), é backup on-demand com passo a passo manual. Ver `ricing/README.md` pros comandos de restore (`kwriteconfig6`, `lookandfeeltool`, cópia de configs do kitty/oh-my-posh).
 
+**Exceção:** `ricing/kitty/kitty.conf` **é** symlinkado — `~/.config/kitty/kitty.conf` aponta direto pra esse arquivo do repo (`ln -s`). Editar em qualquer um dos dois caminhos edita o mesmo arquivo; não precisa mais copiar manualmente pra atualizar o snapshot, só commitar. Setup em máquina nova: `ln -sf ~/linux_scripts/ricing/kitty/kitty.conf ~/.config/kitty/kitty.conf` (criar `~/.config/kitty/` antes se não existir).
+
 Atualizar o snapshot: sobrescrever os arquivos em `ricing/` com o config atual da máquina e commitar. Adicionar novo item ricado (ex: outro terminal, outro tema): criar subpasta em `ricing/`, documentar restore no `ricing/README.md`.
 
 ## Claude Skills
 
 `claude/skills/` versiona skills do Claude Code criadas por mim (ex: `token-efficient-docs`). `claude/install.sh` replica cada skill pra `~/.agents/skills/<nome>/` (fonte compartilhada entre agentes) e cria symlink em `~/.claude/skills/<nome>` (onde o Claude Code descobre skills) — mesmo padrão fonte-no-repo → symlink usado em `dotfiles/`, mas idempotente e sem depender do repo continuar clonado (a cópia em `~/.agents/skills` sobrevive independente do symlink). Adicionar skill nova: criar `claude/skills/<nome>/SKILL.md`, rodar `bash claude/install.sh`. Ver `claude/README.md`.
+
+## Paste de imagem (Claude Code + kitty + KDE Wayland)
+
+Ctrl+V colando imagem (print) direto no Claude Code precisou de 3 correções na máquina:
+
+1. **`wl-clipboard` ausente** — Wayland não tem `xclip`/`xsel`; sem `wl-paste`/`wl-copy` instalado, kitty não acessa a área de transferência. `sudo pacman -S wl-clipboard`.
+2. **kitty remapeava Ctrl+V** — `~/.config/kitty/kitty.conf` tinha `map ctrl+v paste_from_clipboard`, que faz o kitty interceptar a tecla e colar como texto puro antes do Claude Code ver a imagem binária. Comentado.
+3. **Spectacle inconsistente entre GUI e atalho global** — a config gráfica ("copiar imagem" vs "copiar localização") nem sempre reflete no atalho do teclado. Fix: atalho global do KDE (Configurações do Sistema → Atalhos → Atalhos Personalizados) roda direto:
+   ```bash
+   spectacle -b -r -n -c
+   ```
+   (`-b` background, `-r` região, `-n` sem notificação, `-c` força copiar **imagem** pro clipboard, ignora a config salva do GUI).
+
+Teste rápido de diagnóstico: `wl-paste --list-types` depois do print — precisa listar `image/png`. Se só listar `text/plain`/`STRING`, o Spectacle copiou path/texto, não a imagem.
+
+## kitty.conf — bindings customizados
+
+- `map ctrl+shift+t new_tab_with_cwd` — nova aba abre no path atual (default do kitty abre na home).
+- `map ctrl+v paste_from_clipboard` fica **comentado** (ver seção de paste de imagem acima) — não reativar sem entender o motivo.
+- `map ctrl+c copy_to_clipboard` / `map ctrl+shift+c send_text all \x03` — Ctrl+C e Ctrl+Shift+C invertidos (copiar vira Ctrl+C, cancelar/SIGINT vira Ctrl+Shift+C).
 
 ## sysup (engine de update cross-distro/cross-OS, self-updating)
 
