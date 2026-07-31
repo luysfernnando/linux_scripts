@@ -13,6 +13,7 @@ reuso das minhas ferramentas e pequenos utilitários de linha de comando.
 **Conteúdo (exemplos):**
 - `docker.sh` — helpers relacionados a Docker
 - `update-gitkraken.sh` — script para atualizar o GitKraken
+- `claude/` — skills do Claude Code que eu crio, versionadas e instaláveis via `claude/install.sh`
 
 Obs.: a lista acima é ilustrativa; veja o diretório para os arquivos
 presentes.

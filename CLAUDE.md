@@ -53,6 +53,10 @@ bash install.sh
 
 Atualizar o snapshot: sobrescrever os arquivos em `ricing/` com o config atual da máquina e commitar. Adicionar novo item ricado (ex: outro terminal, outro tema): criar subpasta em `ricing/`, documentar restore no `ricing/README.md`.
 
+## Claude Skills
+
+`claude/skills/` versiona skills do Claude Code criadas por mim (ex: `token-efficient-docs`). `claude/install.sh` replica cada skill pra `~/.agents/skills/<nome>/` (fonte compartilhada entre agentes) e cria symlink em `~/.claude/skills/<nome>` (onde o Claude Code descobre skills) — mesmo padrão fonte-no-repo → symlink usado em `dotfiles/`, mas idempotente e sem depender do repo continuar clonado (a cópia em `~/.agents/skills` sobrevive independente do symlink). Adicionar skill nova: criar `claude/skills/<nome>/SKILL.md`, rodar `bash claude/install.sh`. Ver `claude/README.md`.
+
 ## sysup (engine de update cross-distro/cross-OS, self-updating)
 
 `sysup/` é um módulo Go — binário único (`sysup update|mirrors|schedule|gitkraken|tidewave [--dry-run]`) que substitui os antigos scripts/aliases de update espalhados pelo repo. Distribuído como binário standalone (não depende do repo continuar clonado no disco — só os dotfiles em si dependem disso).
