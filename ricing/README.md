@@ -44,13 +44,25 @@ Config em `kitty/`. Tema "Idle Toes" com fundo transparente.
 
 - `background_opacity 0.8` + `dynamic_background_opacity yes` — transparência do fundo.
 - Blur visual vem do **compositor KWin** (blur effect ativado), não do kitty — kitty no Linux/X11 não suporta `background_blur` nativo (isso é exclusivo de macOS).
+- `shell` usa fish se instalado, senão cai pro zsh (`sh -c 'exec "$(command -v fish || command -v zsh)"'`) — funciona em qualquer máquina independente do shell padrão.
 
-Restaurar:
+Restaurar (symlink, não copiar — mantém o arquivo do repo como fonte da verdade):
 
 ```bash
 mkdir -p ~/.config/kitty
-cp ricing/kitty/kitty.conf ricing/kitty/current-theme.conf ~/.config/kitty/
-cp -r ricing/kitty/themes ~/.config/kitty/
+ln -s "$(pwd)/ricing/kitty/kitty.conf" ~/.config/kitty/kitty.conf
+ln -s "$(pwd)/ricing/kitty/current-theme.conf" ~/.config/kitty/current-theme.conf
+```
+
+## fastfetch
+
+Config em `fastfetch/config.jsonc`. Logo pequeno (`CachyOS_small`) pra caber em terminal reduzido, módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia.
+
+Restaurar (symlink):
+
+```bash
+mkdir -p ~/.config/fastfetch
+ln -s "$(pwd)/ricing/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
 ```
 
 ## Prompt (oh-my-posh)
