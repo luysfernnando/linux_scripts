@@ -1,4 +1,7 @@
-package main
+// Package detect figures out the OS/distro family and which optional
+// external tools are present — used to decide which pipeline steps apply
+// to this machine. Leaf package: no internal deps.
+package detect
 
 import (
 	"bufio"

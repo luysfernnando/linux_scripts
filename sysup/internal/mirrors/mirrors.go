@@ -1,4 +1,7 @@
-package main
+// Package mirrors ranks package-manager mirrors (reflector/rate-mirrors on
+// Arch, apt-select on Debian) and tracks when the last check ran so it only
+// happens roughly weekly.
+package mirrors
 
 import (
 	"bytes"
@@ -9,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"sysup/internal/detect"
+	"sysup/internal/pipeline"
+	"sysup/internal/style"
 )
 
 const mirrorCheckInterval = 7 * 24 * time.Hour
@@ -32,10 +39,10 @@ func mirrorStateFile() (string, error) {
 	return filepath.Join(dir, "last-mirror-check"), nil
 }
 
-// dueForMirrorCheck reports whether it's been mirrorCheckInterval (or more,
-// or ever) since the last mirror ranking. Any read/parse error is treated
-// as "yes, check now" — a missing or corrupt state file shouldn't block us.
-func dueForMirrorCheck() bool {
+// DueForCheck reports whether it's been mirrorCheckInterval (or more, or
+// ever) since the last mirror ranking. Any read/parse error is treated as
+// "yes, check now" — a missing or corrupt state file shouldn't block us.
+func DueForCheck() bool {
 	path, err := mirrorStateFile()
 	if err != nil {
 		return true
@@ -91,11 +98,11 @@ func shellSingleQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
-// MirrorRankCommand returns the shell command that best ranks mirrors for
-// this family/toolset, or "" if nothing suitable is installed.
-func MirrorRankCommand(family Family, t Tools) string {
+// RankCommand returns the shell command that best ranks mirrors for this
+// family/toolset, or "" if nothing suitable is installed.
+func RankCommand(family detect.Family, t detect.Tools) string {
 	switch family {
-	case FamilyArch:
+	case detect.FamilyArch:
 		switch {
 		case t.RateMirror:
 			// cachyos-rate-mirrors auto-detects region on its own; no
@@ -113,21 +120,21 @@ func MirrorRankCommand(family Family, t Tools) string {
 			}
 			return cmd + " --save /etc/pacman.d/mirrorlist"
 		}
-	case FamilyDebian:
-		if HasTool("apt-select") {
+	case detect.FamilyDebian:
+		if detect.HasTool("apt-select") {
 			return "apt-select -t 5 && sudo mv sources.list /etc/apt/sources.list"
 		}
 	}
 	return ""
 }
 
-// RunMirrorCheck ranks mirrors if a command is available for this system,
-// then always stamps the state file (even when there's nothing to do) so
-// we don't keep retrying every single run on machines with no ranking tool.
-func RunMirrorCheck(family Family, t Tools, dryRun bool, out io.Writer) error {
-	cmd := MirrorRankCommand(family, t)
+// RunCheck ranks mirrors if a command is available for this system, then
+// always stamps the state file (even when there's nothing to do) so we
+// don't keep retrying every single run on machines with no ranking tool.
+func RunCheck(family detect.Family, t detect.Tools, dryRun bool, out io.Writer) error {
+	cmd := RankCommand(family, t)
 	if cmd == "" {
-		fmt.Fprintln(out, dim("==> nenhuma ferramenta de ranking de mirrors encontrada, pulando"))
+		fmt.Fprintln(out, style.Dim("==> nenhuma ferramenta de ranking de mirrors encontrada, pulando"))
 		if !dryRun {
 			return recordMirrorCheck()
 		}
@@ -144,7 +151,7 @@ func RunMirrorCheck(family Family, t Tools, dryRun bool, out io.Writer) error {
 		effOut = mf
 	}
 
-	err := runShell(dryRun, cmd, effOut)
+	err := pipeline.RunShell(dryRun, cmd, effOut)
 	if mf != nil {
 		mf.Flush()
 	}
@@ -187,6 +194,6 @@ func (w *mirrorNoiseFilter) Write(p []byte) (int, error) {
 
 func (w *mirrorNoiseFilter) Flush() {
 	if w.suppressed > 0 {
-		fmt.Fprintln(w.out, dim(fmt.Sprintf("   (%d mirrors indisponíveis/timeout, ignorados)", w.suppressed)))
+		fmt.Fprintln(w.out, style.Dim(fmt.Sprintf("   (%d mirrors indisponíveis/timeout, ignorados)", w.suppressed)))
 	}
 }

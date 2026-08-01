@@ -1,4 +1,7 @@
-package main
+// Package selfupdate handles sysup replacing its own running binary from
+// the latest GitHub release, plus the best-effort dotfiles repo git-pull
+// that piggybacks on the same "check GitHub" moment.
+package selfupdate
 
 import (
 	"fmt"
@@ -9,25 +12,31 @@ import (
 	"syscall"
 
 	"github.com/blang/semver"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	ghselfupdate "github.com/rhysd/go-github-selfupdate/selfupdate"
+
+	"sysup/internal/style"
 )
 
+// repoSlug identifies the GitHub repo release assets are fetched from —
+// duplicated as a tiny local constant here and in internal/polkit rather
+// than shared, since it's a single string literal.
 const repoSlug = "luysfernnando/linux_scripts"
 
-// version is stamped at release-build time via
-// -ldflags "-X main.version=vX.Y.Z" (GoReleaser does this from the git tag).
-// A "dev" value means a locally-built binary — never self-update those,
-// there is no meaningful "newer" to compare against.
-var version = "dev"
+// Version is stamped at release-build time via
+// -ldflags "-X sysup/internal/selfupdate.Version=vX.Y.Z" (GoReleaser does
+// this from the git tag). A "dev" value means a locally-built binary —
+// never self-update those, there is no meaningful "newer" to compare
+// against.
+var Version = "dev"
 
 // SelfUpdate checks the latest GitHub release against the running version
 // and, if newer, downloads+verifies+replaces the current executable. Any
 // failure (offline, GitHub down, rate-limited) is swallowed as a warning —
 // this must never be the reason `sysup update` aborts.
 //
-// Returns true if the binary was replaced (caller should re-exec).
+// Returns true if the binary was replaced (caller should ReExec).
 func SelfUpdate(dryRun bool) bool {
-	if version == "dev" {
+	if Version == "dev" {
 		return false
 	}
 	if dryRun {
@@ -35,21 +44,21 @@ func SelfUpdate(dryRun bool) bool {
 		return false
 	}
 
-	current, err := semver.Parse(strings.TrimPrefix(version, "v"))
+	current, err := semver.Parse(strings.TrimPrefix(Version, "v"))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, warn("aviso: versão embutida inválida, pulando self-update: "+err.Error()))
+		fmt.Fprintln(os.Stderr, style.Warn("aviso: versão embutida inválida, pulando self-update: "+err.Error()))
 		return false
 	}
 
-	latest, err := selfupdate.UpdateSelf(current, repoSlug)
+	latest, err := ghselfupdate.UpdateSelf(current, repoSlug)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, warn("aviso: self-update falhou, seguindo com a versão atual: "+err.Error()))
+		fmt.Fprintln(os.Stderr, style.Warn("aviso: self-update falhou, seguindo com a versão atual: "+err.Error()))
 		return false
 	}
 	if latest.Version.Equals(current) {
 		return false
 	}
-	fmt.Println(header("==> sysup atualizado: %s -> %s", version, latest.Version))
+	fmt.Println(style.Header("==> sysup atualizado: %s -> %s", Version, latest.Version))
 	return true
 }
 
@@ -76,12 +85,12 @@ func TryUpdateDotfilesRepo(dryRun bool) {
 	}
 
 	line := fmt.Sprintf("git -C %s pull --ff-only", repo)
-	fmt.Println(dim("==> repo dotfiles: " + line))
+	fmt.Println(style.Dim("==> repo dotfiles: " + line))
 	if dryRun {
 		return
 	}
 	if err := exec.Command("git", "-C", repo, "pull", "--ff-only").Run(); err != nil {
-		fmt.Fprintln(os.Stderr, warn("aviso: git pull do repo dotfiles falhou: "+err.Error()))
+		fmt.Fprintln(os.Stderr, style.Warn("aviso: git pull do repo dotfiles falhou: "+err.Error()))
 	}
 }
 

@@ -1,22 +1,20 @@
-package main
+package tools
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"sysup/internal/download"
 )
 
 const (
-	gitkrakenURL      = "https://release.gitkraken.com/linux/gitkraken-amd64.tar.gz"
-	gitkrakenAppDir   = "/opt/gitkraken"
-	gitkrakenBinLink  = "/usr/bin/gitkraken"
-	gitkrakenWrapper  = "/usr/local/bin/gitkraken"
+	gitkrakenURL     = "https://release.gitkraken.com/linux/gitkraken-amd64.tar.gz"
+	gitkrakenAppDir  = "/opt/gitkraken"
+	gitkrakenBinLink = "/usr/bin/gitkraken"
+	gitkrakenWrapper = "/usr/local/bin/gitkraken"
 )
 
 // RunGitKraken ports gitkraken/gitkraken-install-or-update.sh: download the
@@ -24,6 +22,12 @@ const (
 // binary, and create the UPDATE_ON_START-aware wrapper if missing. Same
 // privilege requirements as the original script (root-owned paths), just
 // orchestrated from Go instead of bash.
+//
+// Stays on plain sudo (not the polkit worker) — this installer isn't part
+// of `sysup update`'s pipeline, it's a standalone subcommand, and GitKraken
+// publishes no checksums.txt to verify the download against the way
+// sysup-worker's release assets do (see internal/polkit), so it doesn't
+// route through internal/download's checksum path either.
 func RunGitKraken(args []string) error {
 	tmpDir, err := os.MkdirTemp("", "gitkraken-*")
 	if err != nil {
@@ -33,12 +37,12 @@ func RunGitKraken(args []string) error {
 
 	archivePath := filepath.Join(tmpDir, "gitkraken.tar.gz")
 	fmt.Println("Baixando:", gitkrakenURL)
-	if err := downloadFile(gitkrakenURL, archivePath); err != nil {
+	if err := download.GetToFile(gitkrakenURL, archivePath); err != nil {
 		return fmt.Errorf("download falhou: %w", err)
 	}
 
 	fmt.Println("Extraindo...")
-	if err := extractTarGz(archivePath, tmpDir); err != nil {
+	if err := download.ExtractTarGz(archivePath, tmpDir); err != nil {
 		return fmt.Errorf("extração falhou: %w", err)
 	}
 
@@ -109,78 +113,6 @@ exec "$BIN" "$@"
 	fmt.Println("Abrir: gitkraken")
 	fmt.Println("Atualizar ao abrir (opcional): UPDATE_ON_START=1 gitkraken")
 	return nil
-}
-
-func downloadFile(url, dest string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("status %s", resp.Status)
-	}
-	f, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	return err
-}
-
-func extractTarGz(archivePath, destDir string) error {
-	f, err := os.Open(archivePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-	defer gz.Close()
-
-	tr := tar.NewReader(gz)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(destDir, hdr.Name)
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return err
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(out, tr); err != nil {
-				out.Close()
-				return err
-			}
-			out.Close()
-		case tar.TypeSymlink:
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
-			}
-			_ = os.Remove(target)
-			if err := os.Symlink(hdr.Linkname, target); err != nil {
-				return err
-			}
-		}
-	}
 }
 
 func sudoRun(args ...string) error {

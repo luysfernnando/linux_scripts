@@ -1,4 +1,4 @@
-package main
+package detect
 
 import "os/exec"
 
@@ -27,6 +27,7 @@ type Tools struct {
 	Reflector  bool
 	RateMirror bool // cachyos-rate-mirrors
 	NotifySend bool
+	Pkexec     bool
 }
 
 func DetectTools() Tools {
@@ -48,5 +49,6 @@ func DetectTools() Tools {
 		Reflector:  HasTool("reflector"),
 		RateMirror: HasTool("cachyos-rate-mirrors"),
 		NotifySend: HasTool("notify-send"),
+		Pkexec:     HasTool("pkexec"),
 	}
 }

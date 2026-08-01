@@ -1,11 +1,16 @@
-package main
+package tools
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"sysup/internal/detect"
+	"sysup/internal/download"
 )
 
 const (
@@ -64,8 +69,8 @@ func tidewaveCmdInstall() error {
 }
 
 func tidewaveCmdUpdate(silent bool) error {
-	if HasTool("tidewave-update") {
-		return runSilenceable(silent, "tidewave-update")
+	if detect.HasTool("tidewave-update") {
+		return runNamed(silent, "tidewave-update")
 	}
 
 	dir := tidewaveAppBinDir()
@@ -83,7 +88,7 @@ func tidewaveCmdUpdate(silent bool) error {
 	if !silent {
 		fmt.Println("Baixando:", tidewaveCLIURL)
 	}
-	if err := downloadFile(tidewaveCLIURL, tmpPath); err != nil {
+	if err := download.GetToFile(tidewaveCLIURL, tmpPath); err != nil {
 		return err
 	}
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
@@ -99,11 +104,11 @@ func tidewaveCmdUpdate(silent bool) error {
 }
 
 func tidewaveCmdFixCodexACP(silent bool) error {
-	if HasTool("tidewave-fix-codex-acp") {
-		return runSilenceable(silent, "tidewave-fix-codex-acp")
+	if detect.HasTool("tidewave-fix-codex-acp") {
+		return runNamed(silent, "tidewave-fix-codex-acp")
 	}
 
-	acp, err := lookPathQuiet("codex-acp")
+	acp, err := exec.LookPath("codex-acp")
 	if err != nil {
 		if silent {
 			return err
@@ -140,14 +145,14 @@ func tidewaveCmdFixCodexACP(silent bool) error {
 }
 
 func tidewaveDefaultRun(args []string) error {
-	if HasTool("tidewave-update") {
-		_ = runSilenceable(true, "tidewave-update")
+	if detect.HasTool("tidewave-update") {
+		_ = runNamed(true, "tidewave-update")
 	} else {
 		_ = tidewaveCmdUpdate(true)
 	}
 
-	if HasTool("tidewave-fix-codex-acp") {
-		_ = runSilenceable(true, "tidewave-fix-codex-acp")
+	if detect.HasTool("tidewave-fix-codex-acp") {
+		_ = runNamed(true, "tidewave-fix-codex-acp")
 	} else {
 		_ = tidewaveCmdFixCodexACP(true)
 	}
@@ -188,10 +193,31 @@ Sem comando, executa o Tidewave (com update/fix silenciosos)
 `)
 }
 
-func runSilenceable(silent bool, name string, args ...string) error {
-	return runNamed(silent, name, args...)
+// runNamed runs a named executable with no captured output (or fully
+// silenced, when silent is true) — used for delegating to optional
+// tidewave-update / tidewave-fix-codex-acp helper scripts if present.
+func runNamed(silent bool, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	if !silent {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	return cmd.Run()
 }
 
-func lookPathQuiet(name string) (string, error) {
-	return execLookPath(name)
+func copyFile(src, dst string, mode os.FileMode) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }

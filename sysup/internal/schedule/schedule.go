@@ -1,4 +1,6 @@
-package main
+// Package schedule installs a native periodic trigger (systemd timer,
+// launchd agent, or schtasks job) that runs `sysup mirrors` weekly.
+package schedule
 
 import (
 	"fmt"
@@ -6,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"sysup/internal/detect"
 )
 
 const systemdUnitName = "sysup-mirrors"
@@ -20,11 +24,11 @@ func InstallSchedule() error {
 	}
 
 	switch {
-	case runtime.GOOS == "linux" && HasTool("systemctl"):
+	case runtime.GOOS == "linux" && detect.HasTool("systemctl"):
 		return installSystemdTimer(self)
 	case runtime.GOOS == "darwin":
 		return installLaunchdAgent(self)
-	case runtime.GOOS == "windows" && HasTool("schtasks"):
+	case runtime.GOOS == "windows" && detect.HasTool("schtasks"):
 		return installSchtasks(self)
 	default:
 		return fmt.Errorf("nenhum agendador suportado encontrado neste sistema (systemd/launchd/schtasks)")
