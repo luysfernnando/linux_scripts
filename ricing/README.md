@@ -62,13 +62,15 @@ ln -s "$(pwd)/ricing/terminal/kitty/current-theme.conf" ~/.config/kitty/current-
 
 ## fastfetch
 
-Config em `fastfetch/config.jsonc`. Logo pequeno (`CachyOS_small`) pra caber em terminal reduzido, módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia.
+Config em `fastfetch/config.jsonc`. Logo é `images/165.png` (kitty graphics protocol), módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
 
 Restaurar (symlink):
 
 ```bash
 mkdir -p ~/.config/fastfetch
 ln -s "$(pwd)/ricing/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
+ln -s "$(pwd)/ricing/fastfetch/images" ~/.config/fastfetch/images
+ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
 ```
 
 ## Prompt (oh-my-posh)

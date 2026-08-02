@@ -64,6 +64,8 @@ action_kde_theme() {
 action_fastfetch() {
   echo "==> fastfetch"
   backup_and_link "$REPO_DIR/ricing/fastfetch/config.jsonc" "$HOME/.config/fastfetch/config.jsonc"
+  backup_and_link "$REPO_DIR/ricing/fastfetch/images" "$HOME/.config/fastfetch/images"
+  backup_and_link "$REPO_DIR/ricing/fastfetch/presets" "$HOME/.config/fastfetch/presets"
 }
 
 action_ohmyposh() {

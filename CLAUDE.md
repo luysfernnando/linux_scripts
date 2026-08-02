@@ -87,11 +87,14 @@ as mensagens de loading, silencia o wall broadcast no shutdown, deixa o Plymouth
 a tela. Precisa `sudo`. Re-rodar `silent-boot.sh` após updates do pacote `grub`
 (sobrescreve `/etc/grub.d/10_linux`).
 
-**`ricing/fastfetch/`** — backup on-demand (não symlinkado, exceto
-onde `ricing/README.md` disser o contrário), snapshot pra restaurar depois numa
-reinstalação. Atualizar o snapshot: sobrescrever os arquivos com o config atual da
-máquina e commitar. Adicionar novo item ricado: criar subpasta em `ricing/`, documentar
-restore no `ricing/README.md`.
+**`ricing/fastfetch/`** — `config.jsonc` symlinkado (não backup on-demand). `images/`
+(250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch
+(imagens são LFS no repo original — clone raso baixa só ponteiros, precisa
+`git lfs pull`) e também são symlinkados como pasta inteira pro
+`~/.config/fastfetch/`. Logo atual é `images/165.png`, referenciado em
+`config.jsonc`. `install-menu.sh`'s `action_fastfetch` faz os 3 symlinks
+(config + images + presets). Adicionar novo item ricado: criar subpasta em
+`ricing/`, documentar restore no `ricing/README.md`.
 
 **`install-menu.sh`** (raiz do repo, shell + [`gum`](https://github.com/charmbracelet/gum)):
 menu interativo de setas pra escolher quais pedaços instalar — shell, kitty, tema KDE,
