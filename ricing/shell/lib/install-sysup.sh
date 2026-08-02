@@ -31,7 +31,7 @@ install_sysup_from_release() {
   fi
 
   tar -xzf "$tmpdir/$asset" -C "$tmpdir" sysup
-  install -m 0755 "$tmpdir/sysup" "$HOME/.local/bin/sysup"
+  command install -m 0755 "$tmpdir/sysup" "$HOME/.local/bin/sysup"
   rm -rf "$tmpdir"
   echo "sysup instalado (release) em $HOME/.local/bin/sysup"
 }
@@ -46,7 +46,7 @@ install_sysup_from_source() {
   local tmpbin
   tmpbin="$(mktemp)"
   (cd "$REPO_DIR/sysup" && go build -o "$tmpbin" ./cmd/sysup)
-  install -m 0755 "$tmpbin" "$HOME/.local/bin/sysup"
+  command install -m 0755 "$tmpbin" "$HOME/.local/bin/sysup"
   rm -f "$tmpbin"
   echo "sysup instalado (build local) em $HOME/.local/bin/sysup"
 }
