@@ -1,39 +1,19 @@
- # linux_scripts
+# linux_scripts
 
-Este repositório contém os scripts Linux que eu uso para automações e
-customizações pessoais. O objetivo é centralizar, versionar e facilitar o
-reuso das minhas ferramentas e pequenos utilitários de linha de comando.
+Scripts Linux pessoais (automações, ricing, utilitários linha de comando) — centralizados, versionados, reuso entre máquinas.
 
-**Conceito:**
-- Guardar scripts úteis (shell, automações, helpers) que ajustam meu
-	ambiente ou automatizam tarefas repetitivas.
-- Manter versões simples e executáveis para reproduzir configurações em
-	outras máquinas.
+**Conteúdo:**
+- `sysup/` — engine update cross-distro em Go (ver `CLAUDE.md`, seção sysup)
+- `ricing/` — dotfiles, KDE, kitty, fastfetch, GRUB (ver `ricing/README.md`)
+- `claude/` — skills Claude Code, instaláveis via `claude/install.sh`
+- `docker/` — helpers Docker (install, compose Postgres)
+- `install-menu.sh` — menu interativo (gum), instala pedaços acima em máquina nova
 
-**Conteúdo (exemplos):**
-- `docker.sh` — helpers relacionados a Docker
-- `update-gitkraken.sh` — script para atualizar o GitKraken
-- `claude/` — skills do Claude Code que eu crio, versionadas e instaláveis via `claude/install.sh`
-
-Obs.: a lista acima é ilustrativa; veja o diretório para os arquivos
-presentes.
-
-**Como usar:**
-1. Dê permissão de execução ao script (se necessário):
-
+**Uso:**
 ```bash
-chmod +x script.sh
-./script.sh
+chmod +x install-menu.sh
+./install-menu.sh
 ```
+Leia topo de cada script pra dependências/opções — maioria exige `sudo` pra passos sistema.
 
-2. Leia cabeçalhos/topo dos scripts para opções e dependências.
-
-**Contribuições / Uso pessoal:**
-- Este repositório é voltado para uso pessoal, mas melhorias e sugestões
-	são bem-vindas. Abra uma issue ou envie um pull request se quiser
-	colaborar.
-
-**Licença:**
-- Veja [LICENSE.md](LICENSE.md) para detalhes.
-
----
+Uso pessoal; issues/PRs bem-vindos. Licença: [LICENSE.md](LICENSE.md).

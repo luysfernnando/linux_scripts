@@ -1,11 +1,8 @@
 # Ricing Backup
 
-Snapshot do visual atual (KDE Plasma 6 + kitty + shell) pra restaurar depois.
+Snapshot atual (KDE Plasma 6 + kitty + shell) pra restaurar depois.
 
-**Atalho**: `../install-menu.sh` (raiz do repo) automatiza os passos abaixo num menu
-interativo (setas + `gum`) — instala o que você marcar sem copiar/colar comando por
-comando. Requer `gum` (`sudo pacman -S gum`). O passo a passo manual abaixo continua
-valendo pra quem prefere rodar na mão ou entender exatamente o que cada restore faz.
+**Atalho**: `../install-menu.sh` (raiz repo) automatiza passos abaixo, menu interativo (setas + `gum`). Marca o que quer, instala, sem copiar/colar comando por comando. Requer `gum` (`sudo pacman -S gum`). Passo a passo manual abaixo continua válido pra quem prefere mão ou quer entender cada restore.
 
 ## KDE Plasma
 
@@ -37,7 +34,7 @@ kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
 plasmashell --replace &
 ```
 
-Ou mais simples: System Settings → Appearance → Global Theme → aplicar "Layan" (aplica tema, ícones, cursor e decoração de uma vez, se instalado via `lookandfeeltool`).
+Mais simples: System Settings → Appearance → Global Theme → aplicar "Layan" (tema, ícones, cursor, decoração de uma vez, se instalado via `lookandfeeltool`).
 
 ```bash
 lookandfeeltool -a com.github.vinceliuice.Layan
@@ -45,14 +42,13 @@ lookandfeeltool -a com.github.vinceliuice.Layan
 
 ## Terminal (kitty)
 
-Config em `terminal/kitty/`. Tema "Idle Toes" com fundo transparente. Pasta `terminal/`
-pensada pra caber outros emuladores no futuro (konsole, etc.), não só kitty.
+Config em `terminal/kitty/`. Tema "Idle Toes", fundo transparente. Pasta `terminal/` pensada pra caber outros emuladores futuro (konsole, etc.), não só kitty.
 
-- `background_opacity 0.8` + `dynamic_background_opacity yes` — transparência do fundo.
-- Blur visual vem do **compositor KWin** (blur effect ativado), não do kitty — kitty no Linux/X11 não suporta `background_blur` nativo (isso é exclusivo de macOS).
-- `shell` usa fish se instalado, senão cai pro zsh (`sh -c 'exec "$(command -v fish || command -v zsh)"'`) — funciona em qualquer máquina independente do shell padrão.
+- `background_opacity 0.8` + `dynamic_background_opacity yes` — transparência fundo.
+- Blur visual vem do **compositor KWin** (blur effect ativado), não do kitty — kitty Linux/X11 não suporta `background_blur` nativo (exclusivo macOS).
+- `shell` usa fish se instalado, senão zsh (`sh -c 'exec "$(command -v fish || command -v zsh)"'`) — funciona em qualquer máquina independente do shell padrão.
 
-Restaurar (symlink, não copiar — mantém o arquivo do repo como fonte da verdade):
+Restaurar (symlink, não copiar — repo fica fonte da verdade):
 
 ```bash
 mkdir -p ~/.config/kitty
@@ -62,7 +58,7 @@ ln -s "$(pwd)/ricing/terminal/kitty/current-theme.conf" ~/.config/kitty/current-
 
 ## fastfetch
 
-Config em `fastfetch/config.jsonc`. Logo é `images/165.png` (kitty graphics protocol), módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
+Config em `fastfetch/config.jsonc`. Logo `images/165.png` (kitty graphics protocol), módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
 
 Restaurar (symlink):
 
@@ -75,8 +71,7 @@ ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
 
 ## Prompt (oh-my-posh)
 
-Tema em `shell/zsh/tema/` (mora dentro de `shell/zsh/` porque é especificamente o prompt
-do zsh, não um item solto). `.zshrc` carrega via oh-my-posh:
+Tema em `shell/zsh/tema/` (mora dentro `shell/zsh/` — específico prompt zsh, não item solto). `.zshrc` carrega via oh-my-posh:
 
 ```bash
 eval "$(oh-my-posh init zsh --config ~/.poshthemes/p10k.omp.json)"
@@ -93,13 +88,8 @@ zsh também usa oh-my-zsh (`~/.oh-my-zsh`) — ver `plugins=(...)` e `ZSH_THEME`
 
 ## Shell
 
-`.zshrc`, `.bashrc` e `config.fish` ficam cada um na sua subpasta (`shell/zsh/`,
-`shell/bash/`, `shell/fish/`) — mesmo conjunto de aliases nos três. Restaurar via
-`shell/install.sh` (symlinka pra `~/`, com backup `.bak` se já existir algo lá) ou pelo
-`../install-menu.sh`. Detalhe completo no `CLAUDE.md` da raiz do repo (seção Ricing).
+`.zshrc`, `.bashrc`, `config.fish` — cada um sua subpasta (`shell/zsh/`, `shell/bash/`, `shell/fish/`), mesmos aliases nos três. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
 
 ## GRUB silencioso
 
-`grub/silent-boot.sh` esconde o menu do GRUB e as mensagens de loading, silencia o wall
-broadcast no shutdown e deixa o Plymouth assumir a tela — parte do "deixar o boot
-bonito", por isso mora aqui. Precisa `sudo`; re-rodar depois de updates do pacote `grub`.
+`grub/silent-boot.sh` esconde menu GRUB e mensagens de loading, silencia wall broadcast no shutdown, deixa Plymouth assumir tela — parte do "boot bonito", por isso mora aqui. Precisa `sudo`; re-rodar depois updates do pacote `grub`.

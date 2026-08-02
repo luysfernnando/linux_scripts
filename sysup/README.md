@@ -1,27 +1,40 @@
-# sysup — privilégio via polkit
+# sysup
 
-Este documento cobre só o mecanismo de elevação de privilégio do `sysup update`
-(por que existe, como funciona, e onde ele deliberadamente não resolve tudo). Pro
-resto do `sysup` (pipeline, TUI, self-update, mirrors), ver a seção `sysup` do
-`CLAUDE.md` na raiz do repo.
+Engine de update cross-distro/cross-OS em Go, self-updating. Binário único (`sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup [--dry-run]`), substitui scripts/aliases antigos de update. Standalone — não depende do repo continuar clonado (só dotfiles em si dependem).
 
-## O problema original
+## Layout
 
-`sysup update` roda dentro de um dashboard full-screen (Bubble Tea). Depois que ele
-assume o terminal (alt-screen), não tem como mostrar um prompt de senha no meio do
-run — `stdin`/`stdout` pertencem à TUI, e a saída de cada passo vai pra um buffer, não
-pro terminal real. O mecanismo antigo (`sudo -v` antes de entrar na TUI + um ticker de
-60s tentando manter a credencial viva) funciona na maioria das vezes, mas quebra
-silenciosamente sempre que a credencial expira no meio do run (suspend da máquina,
-`timestamp_timeout` curto no PAM, 2FA que nunca cacheia).
+| Pacote | Faz |
+|---|---|
+| `cmd/sysup/main.go` | Entrypoint fino, chama `internal/cli.Run()` |
+| `internal/cli` | Dispatch de subcomandos + orquestra `update` (self-update → worker polkit → pipeline → TUI/plain → resumo) |
+| `internal/detect` | Detecta família do SO (`/etc/os-release` Linux, `runtime.GOOS` mac/Windows) + ferramentas opcionais instaladas (yay/paru, flatpak, brew, composer, npm, bun, fwupdmgr, choco/winget, pkexec) |
+| `internal/style` | Helpers ANSI (`Ok`/`Fail`/`Warn`/`Dim`/`Header`/`Colorize`), pacote-folha sem dependência interna |
+| `internal/pipeline` | Monta steps por família: paralelo (pacotes, flatpak, composer, npm, bun, firmware — goroutines, output prefixado `[nome]`) + serial (órfãos + cache, roda só depois do paralelo terminar) |
+| `internal/polkit` + `cmd/sysup-worker` | Worker de elevação de privilégio de vida curta — ver seção Privilégio abaixo |
+| `internal/download` | Baixa+extrai+confere checksum (compartilhado por `internal/polkit` pro `sysup-worker` e `internal/tools` pro GitKraken) |
+| `internal/mirrors` | Rankeia mirrors (reflector/cachyos-rate-mirrors), guarda timestamp em `~/.local/state/sysup/last-mirror-check`, re-rankeia sozinho a cada 7 dias. Filtro geográfico opcional via `~/.config/sysup/mirror-country` |
+| `internal/selfupdate` | Compara versão embutida (`-ldflags` setado pelo GoReleaser) com última release GitHub, baixa+substitui binário rodando via `syscall.Exec`; falha só loga aviso, nunca aborta o update. Também tenta `git pull --ff-only` nos dotfiles via `~/.config/sysup/repo-path` |
+| `internal/tools` | Portas de `gitkraken-install-or-update.sh`/`tidewave.sh` pro Go (download, safe-swap, wrapper `UPDATE_ON_START`, `fix-codex-acp`). Fora do pipeline automático — sem checagem de versão, sempre rebaixam o asset inteiro, ficam como subcomandos explícitos |
+| `internal/schedule` | Agendador nativo (systemd user timer / launchd / schtasks) pros mirrors, via `sysup schedule` |
+| `internal/tui` | Dashboard full-screen (Bubble Tea + Lip Gloss + Bubbles) quando stdout é terminal real e não `--dry-run` — spinner, progresso `(N/TOTAL)` lido da saída do pacman, resumo final em caixa (`tui.RenderSummaryBox`). Fallback plain (`runUpdatePlain`) fora de terminal/CI/`NO_COLOR`/`--dry-run` |
 
-Uma tentativa anterior (não commitada, só existiu como `git stash`) resolvia isso
-gerando um drop-in `/etc/sudoers.d/sysup` com regras `NOPASSWD` escopadas por comando
-exato. Foi descartada: mesmo escopada, uma regra `NOPASSWD` **permanente** instalada no
-sistema é uma brecha grande demais pra deixar aberta indefinidamente só pra um
-utilitário pessoal de update.
+## Release
 
-## Arquitetura: worker de vida curta, autorizado uma vez via `pkexec`
+`git tag vX.Y.Z && git push --tags` → `.github/workflows/release.yml` roda GoReleaser (`.goreleaser.yaml`), builda linux/darwin × amd64/arm64 + windows/amd64 (`sysup-worker` é linux-only), publica GitHub Release com `checksums.txt`.
+
+Rebuild manual (dev): `cd sysup && go build -o ~/.local/bin/sysup ./cmd/sysup`.
+Testar release local sem publicar: `go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean --skip=publish`.
+
+## Privilégio via polkit
+
+### Problema original
+
+`sysup update` roda num dashboard full-screen (Bubble Tea); depois de assumir o terminal (alt-screen) não dá pra mostrar prompt de senha no meio do run. Mecanismo antigo (`sudo -v` + ticker 60s) quebra silenciosamente quando a credencial expira no meio (suspend, `timestamp_timeout` curto no PAM, 2FA).
+
+Tentativa anterior (só existiu como `git stash`) gerava `/etc/sudoers.d/sysup` com `NOPASSWD` escopado. Descartada: regra `NOPASSWD` **permanente** no sistema é brecha grande demais pra um utilitário pessoal.
+
+### Arquitetura: worker de vida curta, autorizado uma vez via `pkexec`
 
 ```
 sysup update
@@ -39,97 +52,44 @@ sysup update
   └─ worker.Close() ──── fecha o pipe de stdin do worker → ele recebe EOF e encerra
 ```
 
-Pontos centrais:
+| Ponto | Detalhe |
+|---|---|
+| Autorização única | Uma `<action>` polkit (`io.github.luysfernnando.sysup.worker`) amarrada ao binário — um evento de autorização por `update`, não por passo |
+| Validação | Toda dentro do worker, nunca confia no que chega pelo socket. Whitelist fixa por família (`pacman -Syu --noconfirm`, `pacman -Rns --noconfirm <lista>`, `paccache -r`, `pacman -U --noconfirm <cache yay/paru>`, equivalentes apt/dnf/zypper, as 2 invocações exatas de `npm -g`) — sem `sh -c`, sem argumento livre. Worker re-detecta família/ferramentas sozinho |
+| Não é daemon | Não instalado como serviço, não sobrevive entre execuções. Ciclo de vida = pipe stdin que o `sysup` pai mantém aberto; fecha → EOF → worker encerra. Timeout 15min só como defesa em profundidade |
+| Socket | Local, permissão 0600, dentro `$XDG_RUNTIME_DIR` — modelo de ameaça pra máquina pessoal single-user, não multi-tenant |
 
-- **Uma única autorização por execução.** Só existe uma `<action>` de polkit
-  (`io.github.luysfernnando.sysup.worker`), amarrada ao binário `sysup-worker`. Ela não
-  varia por operação — o worker decide internamente o que é permitido, então só existe
-  um evento de autorização por `sysup update`, não um por passo.
-- **Toda validação acontece dentro do worker**, nunca confiando no que chega pelo
-  socket sem checagem. A whitelist é um conjunto fixo de comandos exatos por família
-  (`pacman -Syu --noconfirm`, `pacman -Rns --noconfirm <lista>`, `paccache -r`,
-  `pacman -U --noconfirm <path dentro do cache do yay/paru>`, os equivalentes
-  apt/dnf/zypper, e as duas invocações exatas do passo `npm -g`) — sem `sh -c`,
-  sem argumento livre. O worker também **re-detecta**
-  família/ferramentas sozinho; nunca confia em nada que o cliente diga sobre o sistema.
-- **Não é um daemon.** `sysup-worker` não é instalado como serviço, não sobrevive entre
-  execuções, não fica residente entre boots. Seu ciclo de vida está amarrado a um pipe
-  de stdin que o `sysup` pai mantém aberto pela duração do run — ao fechar (fim normal
-  ou crash), o worker recebe EOF e encerra. Um timeout de 15min existe só como defesa em
-  profundidade, caso o pipe nunca feche por algum motivo. Isso é intencionalmente
-  diferente da alternativa de daemon systemd cogitada como plano B (ver abaixo).
-- **Socket local, permissão 0600** dentro de `$XDG_RUNTIME_DIR` (diretório 0700 por
-  usuário, padrão do systemd-logind) — única barreira de acesso. Modelo de ameaça
-  adequado pra uma máquina pessoal single-user, não pra ambiente multi-tenant.
+### yay vs paru
 
-## O caso yay/paru
+yay e paru chamam `sudo` por conta própria pra instalar pacote AUR compilado (paru também sincroniza oficiais no mesmo `-Syu`).
 
-yay e paru chamam `sudo` **por conta própria**, internamente, pra instalar o pacote AUR
-que acabaram de compilar (paru também usa isso pra sincronizar pacotes oficiais dentro
-do mesmo `-Syu`). Pesquisamos se dava pra redirecionar isso sem modificar os binários:
+| | Suporta redirecionar `sudo`? | Resultado |
+|---|---|---|
+| paru | Sim — `paru.conf [bin] Sudo = sysup-authbridge` (configurado por `polkit-setup`, symlink pro `sysup-worker`) | Uma autenticação cobre tudo, paru incluso |
+| yay | Não — sem flag/config/env documentada | Update dispara 2º prompt (`sudo` clássico), primado junto com a autorização polkit, nunca no meio do dashboard. Sombrear `sudo` globalmente reabriria a brecha descartada acima — **deliberadamente não fizemos isso** |
 
-- **paru suporta** (`paru.conf`, seção `[bin]`): `Sudo = <binário>`. `sysup polkit-setup`
-  configura isso automaticamente, apontando pra `sysup-authbridge` — um binário sem
-  privilégio (symlink pro mesmo `sysup-worker`) que só repassa a chamada pro socket do
-  worker já autorizado. Resultado: paru nunca chama `sudo` de verdade, então **uma
-  autenticação cobre tudo**, paru incluso. O `SudoLoop` do próprio paru (keepalive de
-  credencial) não é tocado nem precisa ser — o worker já cobre a sessão inteira.
-- **yay não suporta** isso — não existe flag, config ou env var documentada pra trocar o
-  binário de escalação. A única forma seria sombrear o `sudo` do sistema globalmente, o
-  que reabriria exatamente o tipo de brecha ampla que motivou descartar o approach de
-  sudoers. **Deliberadamente não fizemos isso.**
+`sysup-authbridge` também precisa funcionar fora do `sysup update` (ex: `paru -Syu` na mão): se `$SYSUP_WORKER_SOCKET` não definido ou worker não responde, cai pro `sudo` real, comportamento idêntico ao paru padrão. Só propaga erro sem retry quando o worker executa e o comando em si falha (repetir via sudo rodaria duas vezes).
 
-Consequência prática: em máquinas com **yay**, `sysup update` ainda dispara um segundo
-prompt — o `sudo` clássico, primado no mesmo instante em que o worker é autorizado
-(ambos antes do alt-screen, nunca no meio do dashboard). Não é "uma senha só" no sentido
-literal nesse caso específico, mas resolve o bug real (travar/falhar no meio do update).
-Quem quer a experiência de senha única de verdade numa máquina Arch: **use paru em vez
-de yay** (nota, não exigência — yay continua funcionando, só com um prompt a mais).
+Máquinas sem yay/paru (pacman puro, apt, dnf, zypper): exatamente um prompt, sempre.
 
-### `sysup-authbridge` precisa funcionar fora do `sysup update` também
+### Limitações conhecidas
 
-Depois que `polkit-setup` configura `paru.conf`, `sysup-authbridge` vira a **única**
-forma de paru escalar privilégio — inclusive quando alguém roda `paru -Syu` na mão, sem
-o `sysup` no meio. Por isso ele nunca falha direto: se `$SYSUP_WORKER_SOCKET` não está
-definido (uso manual) ou o worker não responde (socket morto, `sysup update` não está
-rodando), ele cai pro `sudo` real do sistema, prompt normal, comportamento idêntico ao
-que paru sempre teve. Só quando o worker **executa e a própria pacman/etc falha** é que
-o authbridge propaga o erro sem tentar de novo — repetir via sudo nesse caso rodaria o
-comando duas vezes.
+| Limitação | Detalhe |
+|---|---|
+| Headless sem agente gráfico | Sessão só-TTY (SSH sem X/Wayland): `pkexec` cai pro `pkttyagent`, mesma restrição do `sudo` antigo. Design resolve pra sessões gráficas (uso real, KDE Plasma), não headless |
+| `npm -g` na whitelist | São as 2 invocações exatas que o pipeline sempre emite (`npm install -g npm@latest`, `npm update -g`) — não é acesso livre |
+| `polkit-setup` edita `paru.conf` | Primeira vez que o setup mexe em config de terceiros — faz backup `.bak` antes, mostra conteúdo proposto antes de aplicar |
 
-Máquinas sem yay/paru (pacman puro, apt, dnf, zypper): **exatamente um prompt**,
-sempre.
+### Alternativa cogitada: daemon systemd + socket
 
-## Limitações conhecidas, sem esconder
-
-- **Headless sem agente gráfico de polkit.** Numa sessão só-TTY (SSH sem X/Wayland),
-  `pkexec` cai pro `pkttyagent`, que prompta contra o terminal controlador — herdando a
-  mesma restrição de "precisa acontecer antes do alt-screen" que o `sudo` tem hoje. Este
-  design resolve o problema pra sessões gráficas (o uso real do usuário, que roda KDE
-  Plasma), não pra máquinas headless.
-- **`npm -g` está na whitelist** como as duas invocações exatas que o pipeline sempre
-  emite (`npm install -g npm@latest`, `npm update -g`) — não é "npm pode fazer qualquer
-  coisa como root", é exatamente o que o passo já fazia antes, só que sem sudo repetido.
-- **`sysup polkit-setup` é a primeira vez que o setup edita um arquivo de config de
-  terceiros** (`paru.conf`), não só cria arquivos novos — por isso faz backup `.bak`
-  antes de sobrescrever e mostra o conteúdo final proposto antes de aplicar.
-
-## Comparação com a alternativa: daemon systemd + socket
-
-Combinado com o usuário: se essa abordagem via polkit não se comportar como esperado na
-prática, o próximo passo é um daemon root persistente (`systemd` service/socket) que o
-`sysup` cliente fala por um socket Unix — sem `pkexec`, sem prompt algum depois do setup
-inicial.
+Se polkit não se provar confiável em uso real, plano B é daemon root persistente (`systemd` service/socket) — sem `pkexec`, zero prompts após setup.
 
 | | polkit (atual) | daemon systemd (plano B) |
 |---|---|---|
 | Prompts após setup | 1 por run (0 com paru; 2 com yay) | 0 |
-| Processo root residente | Não — só durante o run | Sim, sempre (ou socket-activated) |
-| Superfície de ataque permanente | Nenhuma além dos arquivos instalados | Um listener root sempre vivo |
+| Processo root residente | Não — só durante run | Sim, sempre |
+| Superfície de ataque permanente | Nenhuma além dos arquivos instalados | Listener root sempre vivo |
 | Peças móveis | policy XML + 1 binário + symlink | unit files + socket activation + protocolo IPC |
-| Portável entre distros | Sim (polkit existe em praticamente todo Linux desktop) | Sim, mas mais peças pra instalar/habilitar |
+| Portável entre distros | Sim (polkit em quase todo Linux desktop) | Sim, mais peças pra instalar/habilitar |
 
-O polkit ganha em superfície de ataque (nada fica residente); o daemon ganharia em UX
-pura (zero prompts, sempre). Se o polkit não se provar confiável em uso real (ex:
-diferenças entre desktops, comportamento inconsistente do agente gráfico em alguma
-distro), essa tabela é o ponto de partida pra reavaliar.
+Polkit ganha em superfície de ataque; daemon ganharia em UX pura (zero prompts sempre).
