@@ -90,6 +90,17 @@ zsh também usa oh-my-zsh (`~/.oh-my-zsh`) — ver `plugins=(...)` e `ZSH_THEME`
 
 `.zshrc`, `.bashrc`, `config.fish` — cada um sua subpasta (`shell/zsh/`, `shell/bash/`, `shell/fish/`), mesmos aliases nos três. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
 
+## Assinatura de commits (SSH)
+
+`shell/.gitconfig` usa `gpg.format = ssh` — commits assinados com chave SSH dedicada, não a de autenticação. Setup por máquina nova:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_luysfernnando_sign_commits -C "email signing"
+echo "luysfernnando@gmail.com $(cat ~/.ssh/id_luysfernnando_sign_commits.pub)" > ~/.ssh/allowed_signers
+```
+
+Depois cadastra a pubkey nova no GitHub (github.com/settings/keys → "New SSH key" → tipo **Signing Key**, não Authentication). `allowed_signers` é só pra `git log --show-signature` validar localmente — GitHub verifica sozinho pelas chaves cadastradas na conta.
+
 ## GRUB silencioso
 
 `grub/silent-boot.sh` esconde menu GRUB e mensagens de loading, silencia wall broadcast no shutdown, deixa Plymouth assumir tela — parte do "boot bonito", por isso mora aqui. Precisa `sudo`; re-rodar depois updates do pacote `grub`.

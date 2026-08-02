@@ -21,11 +21,11 @@ backup_and_link() {
 
 backup_and_link "$SHELL_DIR/zsh/.zshrc" "$HOME/.zshrc"
 backup_and_link "$SHELL_DIR/bash/.bashrc" "$HOME/.bashrc"
+backup_and_link "$SHELL_DIR/.gitconfig" "$HOME/.gitconfig"
 
-# .gitconfig fica de fora: a cópia no repo está desatualizada (assinatura
-# GPG antiga) em relação ao que está em uso de verdade (assinatura SSH) —
-# symlinkar ela por cima quebraria commits assinados. Reative aqui só depois
-# de atualizar ricing/shell/.gitconfig pra bater com o ~/.gitconfig real.
+# .gitconfig usa assinatura SSH (gpg.format=ssh) — cada máquina precisa da
+# própria chave em ~/.ssh/id_luysfernnando_sign_commits (gerar com ssh-keygen
+# se não existir) cadastrada no GitHub como "Signing Key". Ver ricing/README.md.
 
 # ---------------------------
 # Fish (só se instalado)

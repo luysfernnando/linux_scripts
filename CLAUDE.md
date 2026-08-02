@@ -37,8 +37,9 @@ KDE Plasma 6 + kitty + zsh/oh-my-posh. `ricing/README.md` tem os comandos de res
 | prompt | oh-my-posh, `p10k.omp.json` | `ricing/shell/zsh/tema/` | Não (copiado pra `~/.poshthemes/`) |
 | fastfetch | logo `images/165.png`, presets de terceiros | `ricing/fastfetch/` (`config.jsonc`, `images/`, `presets/`) | Sim (pasta inteira) |
 | GRUB | boot silencioso (sem menu/mensagens) | `ricing/grub/silent-boot.sh` | Não, script `sudo` |
+| git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/.gitconfig` | Sim |
 
-`shell/.gitconfig` existe no repo mas **não** é linkado — desatualizado (GPG antigo vs SSH atual); não reativar sem sincronizar.
+`shell/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave dedicada `~/.ssh/id_luysfernnando_sign_commits`) — setup por máquina em `ricing/README.md`.
 
 `install-menu.sh` automatiza tudo acima (shell, kitty, tema KDE, fastfetch, oh-my-posh, sysup); requer `gum`. `ricing/shell/install.sh` faz o setup de shell isolado + instala `sysup` (baixa release do GitHub, ou `go build` como fallback).
 
