@@ -50,7 +50,18 @@ func SelfUpdate(dryRun bool) bool {
 		return false
 	}
 
-	latest, err := ghselfupdate.UpdateSelf(current, repoSlug)
+	// Filter required: assets are matched by OS/arch suffix only (no cmd-name
+	// check), so "sysup-worker_linux_amd64.tar.gz" also matches the
+	// "linux_amd64.tar.gz" suffix and can shadow "sysup_linux_amd64.tar.gz"
+	// in the release asset list, downloading the wrong binary.
+	updater, err := ghselfupdate.NewUpdater(ghselfupdate.Config{
+		Filters: []string{`^sysup_`},
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, style.Warn("aviso: self-update falhou ao configurar updater: "+err.Error()))
+		return false
+	}
+	latest, err := updater.UpdateSelf(current, repoSlug)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, style.Warn("aviso: self-update falhou, seguindo com a versão atual: "+err.Error()))
 		return false
