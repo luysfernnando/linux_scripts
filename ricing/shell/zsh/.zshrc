@@ -18,6 +18,11 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # ---------------------------
+# FASTFETCH (resumo ao abrir nova aba/terminal)
+# ---------------------------
+command -v fastfetch >/dev/null 2>&1 && fastfetch
+
+# ---------------------------
 # HISTÓRICO
 # ---------------------------
 HISTFILE=~/.zsh_history
