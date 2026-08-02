@@ -13,12 +13,14 @@ Snapshot atual (KDE Plasma 6 + kitty + shell) pra restaurar depois.
 | Ícones | Papirus-Dark |
 | Cursor | Layan-white-cursors |
 | Decoração de janela (Aurorae) | Layan (`__aurorae__svg__Layan`) |
+| Estilo de app (widget style) | Kvantum-Dark, engine Kvantum com tema `KvMojave` |
 | Efeito blur do KWin | ativado |
 
-Pacotes AUR necessários (Arch):
+Pacotes necessários (Arch):
 
 ```bash
 yay -S layan-kde-git papirus-icon-theme-git layan-cursor-theme
+sudo pacman -S kvantum   # inclui tema KvMojave
 ```
 
 Restaurar via terminal (Plasma 6):
@@ -30,6 +32,8 @@ kwriteconfig6 --file kcminputrc --group Mouse --key cursorTheme "Layan-white-cur
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme "__aurorae__svg__Layan"
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library "org.kde.kwin.aurorae"
 kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
+kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle "kvantum-dark"
+kvantummanager --set KvMojave
 # relogar ou reiniciar plasmashell pra aplicar tudo
 plasmashell --replace &
 ```

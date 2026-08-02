@@ -32,6 +32,7 @@ KDE Plasma 6 + kitty + zsh/oh-my-posh. `ricing/README.md` tem os comandos de res
 | KDE ícones | Papirus-Dark | — | Não |
 | KDE cursor | Layan-white-cursors | — | Não |
 | KDE decoração | Aurorae Layan | — | Não |
+| KDE estilo de app | Kvantum-Dark (engine Kvantum, tema `KvMojave`) | — (`~/.config/Kvantum/kvantum.kvconfig`) | Não |
 | kitty | tema "Idle Toes", fundo transparente 0.8 | `ricing/terminal/kitty/` | Sim |
 | shell | zsh/bash/fish, mesmos aliases | `ricing/shell/{zsh,bash,fish}/` | Sim (zsh/bash); fish é `source`ado |
 | prompt | oh-my-posh, `p10k.omp.json` | `ricing/shell/zsh/tema/` | Não (copiado pra `~/.poshthemes/`) |
