@@ -39,6 +39,8 @@ KDE Plasma 6 + kitty + zsh/oh-my-posh. `ricing/README.md` tem os comandos de res
 | fastfetch | logo `images/165.png`, presets de terceiros | `ricing/fastfetch/` (`config.jsonc`, `images/`, `presets/`) | Sim (pasta inteira) |
 | GRUB | boot silencioso (sem menu/mensagens) | `ricing/grub/silent-boot.sh` | Não, script `sudo` |
 | git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/.gitconfig` | Sim |
+| WezTerm (Windows) | Catppuccin Mocha, WebGpu, tab bar embaixo | `ricing/terminal/wezterm/wezterm.lua` | Não, copiado |
+| PowerShell/Starship (Windows) | prompt Starship + `Terminal-Icons` | `ricing/shell/powershell/` | Não, copiado |
 
 `shell/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave dedicada `~/.ssh/id_luysfernnando_sign_commits`) — setup por máquina em `ricing/README.md`.
 

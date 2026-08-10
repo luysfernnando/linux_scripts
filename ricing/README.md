@@ -60,6 +60,33 @@ ln -s "$(pwd)/ricing/terminal/kitty/kitty.conf" ~/.config/kitty/kitty.conf
 ln -s "$(pwd)/ricing/terminal/kitty/current-theme.conf" ~/.config/kitty/current-theme.conf
 ```
 
+## Terminal (WezTerm, Windows)
+
+Config em `terminal/wezterm/wezterm.lua`. Máquina Windows separada da KDE/kitty acima — WebGpu (`HighPerformance`), Catppuccin Mocha, tab bar embaixo (estilo kitty) integrada ao fundo (cores manuais iguais ao bg, sem faixa separada), `default_prog` = pwsh.
+
+- `Ctrl+T` nova aba, `Ctrl+Q` fecha aba atual.
+- `Ctrl+C` sempre copia (mesmo sem seleção); `Ctrl+Shift+C` manda SIGINT (`\x03`) pro processo.
+- `Ctrl+V` cola.
+
+Restaurar (Windows, copiar — sem symlink fácil sem modo dev/admin):
+
+```powershell
+Copy-Item ricing\terminal\wezterm\wezterm.lua "$HOME\.wezterm.lua"
+```
+
+## Shell (PowerShell + Starship, Windows)
+
+Config em `shell/powershell/`. Prompt via Starship (não oh-my-posh — testado, ~900ms mais lento no boot pelo módulo de 55KB que oh-my-posh gera; Starship é ~10KB). `starship.toml` desliga módulos de versão de linguagem (php/node/python/etc) — cada um spawna processo verificando `composer.json`/`package.json` por pasta, lento em drive de rede. `Terminal-Icons` (módulo PowerShell Gallery) dá ícones no `ls`/`Get-ChildItem`.
+
+Restaurar:
+
+```powershell
+Copy-Item ricing\shell\powershell\starship.toml "$HOME\.config\starship.toml"
+Copy-Item ricing\shell\powershell\Microsoft.PowerShell_profile.ps1 "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+winget install Starship.Starship
+Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser
+```
+
 ## fastfetch
 
 Config em `fastfetch/config.jsonc`. Logo `images/165.png` (kitty graphics protocol), módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
