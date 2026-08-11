@@ -3,7 +3,9 @@ set -euo pipefail
 
 CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_SRC_DIR="$CLAUDE_DIR/skills"
+RULES_SRC_DIR="$CLAUDE_DIR/rules"
 AGENTS_SKILLS_DIR="$HOME/.agents/skills"
+CLAUDE_RULES_DIR="$HOME/.claude/rules"
 
 # Diretórios de agente que descobrem skills via ~/.agents/skills — symlinkados
 # por skill. Hoje só o Claude Code tem esse conceito; adicionar outro agente
@@ -38,5 +40,8 @@ for skill_path in "$SKILLS_SRC_DIR"/*/; do
     link_skill_into_agent "$name" "$agent_dir"
   done
 done
+
+rsync -a --delete "$RULES_SRC_DIR/" "$CLAUDE_RULES_DIR/"
+echo "Sincronizado: rules -> $CLAUDE_RULES_DIR"
 
 echo "Done. Skills instaladas: $(ls -1 "$SKILLS_SRC_DIR")"

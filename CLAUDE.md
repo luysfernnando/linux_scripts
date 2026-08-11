@@ -62,9 +62,11 @@ Binário único: `sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup 
 
 Layout por pacote (`internal/*`), release e detalhe completo do worker de privilégio: `sysup/README.md`.
 
-## Claude Skills
+## Claude Skills & Rules
 
-`claude/skills/` → `claude/install.sh` replica pra `~/.agents/skills/<nome>/` + symlink em `~/.claude/skills/<nome>`. Nova skill: criar `claude/skills/<nome>/SKILL.md`, rodar o install. Ver `claude/README.md`.
+`claude/skills/` → `claude/install.sh` replica pra `~/.agents/skills/<nome>/` + symlink em `~/.claude/skills/<nome>`. Nova skill: criar `claude/skills/<nome>/SKILL.md`, rodar o install.
+
+`claude/rules/` (`common/` + `rust/`) → mesmo install.sh sincroniza pra `~/.claude/rules/`. Ver `claude/README.md`.
 
 ## Gotchas conhecidos
 
