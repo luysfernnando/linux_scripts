@@ -30,6 +30,8 @@ Idempotente — roda de novo qualquer hora, sincroniza mudanças do repo.
 | `token-efficient-docs` | Otimiza CLAUDE.md/AGENTS.md/SKILL.md/docs pra IA — corta tokens, mantém substância técnica. |
 | `rust-patterns` | Padrões idiomáticos Rust — ownership, error handling, traits, concorrência. |
 | `rust-testing` | Padrões de teste Rust — unit/integration/async/property-based, TDD. |
+| `project-context-optimizer` | Audita CLAUDE.md/rules/skills/hooks/agents e recomenda camada certa por custo de tokens. |
+| `commit` | Commits limpos e separados por concern, mensagem via `/caveman:caveman-commit`, nunca trailer de IA. |
 
 ## Rules
 
