@@ -7,7 +7,9 @@ use std::time::{Duration, Instant};
 
 use crossterm::event::{self, Event as CEvent, KeyCode, KeyModifiers};
 use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use ratatui::backend::CrosstermBackend;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -173,7 +175,8 @@ pub fn run_steps_tui(steps: Vec<Step>, dry_run: bool, offset: usize) -> Vec<Step
 
     let (tx, rx) = mpsc::channel::<TuiEvent>();
     let steps = Arc::new(steps);
-    let results: Arc<Mutex<Vec<Option<StepResult>>>> = Arc::new(Mutex::new((0..n).map(|_| None).collect()));
+    let results: Arc<Mutex<Vec<Option<StepResult>>>> =
+        Arc::new(Mutex::new((0..n).map(|_| None).collect()));
 
     let render_handle = std::thread::spawn(move || {
         let _ = render_loop(names, offset, rx, n);
@@ -315,7 +318,11 @@ fn render_loop(
                 TuiEvent::Progress(i, cur, total) => rows[i].progress = Some((cur, total)),
                 TuiEvent::Done(i, dur, err, _output) => {
                     rows[i].dur = dur;
-                    rows[i].status = if err.is_some() { StepStatus::Failed } else { StepStatus::Ok };
+                    rows[i].status = if err.is_some() {
+                        StepStatus::Failed
+                    } else {
+                        StepStatus::Ok
+                    };
                     rows[i].err = err;
                     done_count += 1;
                 }
@@ -332,7 +339,9 @@ fn draw_ui(frame: &mut ratatui::Frame, rows: &[TuiStep], spinner_frame: usize, e
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(Span::styled(
         "sysup update",
-        Style::default().add_modifier(Modifier::BOLD).fg(Color::Indexed(212)),
+        Style::default()
+            .add_modifier(Modifier::BOLD)
+            .fg(Color::Indexed(212)),
     )));
     lines.push(Line::from(""));
 
@@ -349,7 +358,11 @@ fn draw_ui(frame: &mut ratatui::Frame, rows: &[TuiStep], spinner_frame: usize, e
         } else {
             Style::default().fg(row.color)
         };
-        let mut spans = vec![mark, Span::raw(" "), Span::styled(row.name.clone(), name_style)];
+        let mut spans = vec![
+            mark,
+            Span::raw(" "),
+            Span::styled(row.name.clone(), name_style),
+        ];
         if row.status == StepStatus::Running {
             if let Some((cur, total)) = row.progress {
                 spans.push(Span::styled(
@@ -370,7 +383,9 @@ fn draw_ui(frame: &mut ratatui::Frame, rows: &[TuiStep], spinner_frame: usize, e
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
         format!("decorrido: {:?}", round_secs(elapsed)),
-        Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::ITALIC),
+        Style::default()
+            .fg(Color::Indexed(240))
+            .add_modifier(Modifier::ITALIC),
     )));
 
     let block = Block::default()

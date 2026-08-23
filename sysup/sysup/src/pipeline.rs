@@ -152,7 +152,12 @@ fn add_step(dst: &mut Vec<Step>, name: &str, shell_line: &str, needs_privilege: 
     });
 }
 
-fn add_worker_step(dst: &mut Vec<Step>, name: &str, argv: &[&str], worker: Arc<WorkerClientHandle>) {
+fn add_worker_step(
+    dst: &mut Vec<Step>,
+    name: &str,
+    argv: &[&str],
+    worker: Arc<WorkerClientHandle>,
+) {
     let argv: Vec<String> = argv.iter().map(|s| s.to_string()).collect();
     dst.push(Step {
         name: name.to_string(),
@@ -315,7 +320,11 @@ pub fn build_pipeline(
                         handle.clone(),
                     );
                 } else {
-                    add(&mut parallel, "Pacotes do sistema (dnf)", "sudo dnf upgrade -y");
+                    add(
+                        &mut parallel,
+                        "Pacotes do sistema (dnf)",
+                        "sudo dnf upgrade -y",
+                    );
                 }
             }
         }
@@ -329,7 +338,11 @@ pub fn build_pipeline(
                         handle.clone(),
                     );
                 } else {
-                    add(&mut parallel, "Pacotes do sistema (zypper)", "sudo zypper update -y");
+                    add(
+                        &mut parallel,
+                        "Pacotes do sistema (zypper)",
+                        "sudo zypper update -y",
+                    );
                 }
             }
         }
@@ -351,7 +364,11 @@ pub fn build_pipeline(
     // Homebrew on Linux is common alongside pacman/apt/dnf, so check it
     // independently of family instead of only under Family::Darwin.
     if *family != Family::Darwin && t.brew {
-        add(&mut parallel, "Homebrew (linux)", "brew update && brew upgrade");
+        add(
+            &mut parallel,
+            "Homebrew (linux)",
+            "brew update && brew upgrade",
+        );
     }
 
     if t.flatpak {
@@ -518,7 +535,11 @@ fn arch_cleanup_via_worker(
         .collect();
 
     if !orphans.is_empty() {
-        let mut argv = vec!["pacman".to_string(), "-Rns".to_string(), "--noconfirm".to_string()];
+        let mut argv = vec![
+            "pacman".to_string(),
+            "-Rns".to_string(),
+            "--noconfirm".to_string(),
+        ];
         argv.extend(orphans);
         run_worker_cmd(dry_run, worker, out, &argv)?;
     } else {

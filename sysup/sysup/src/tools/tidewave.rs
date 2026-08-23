@@ -59,8 +59,7 @@ fn tidewave_cmd_update(silent: bool) -> anyhow::Result<()> {
     let dir = tidewave_app_bin_dir();
     std::fs::create_dir_all(&dir)?;
 
-    let tmp_path =
-        std::env::temp_dir().join(format!("tidewave-cli-{}", std::process::id()));
+    let tmp_path = std::env::temp_dir().join(format!("tidewave-cli-{}", std::process::id()));
 
     if !silent {
         println!("Baixando: {TIDEWAVE_CLI_URL}");

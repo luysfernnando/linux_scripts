@@ -69,8 +69,7 @@ pub fn is_wsl() -> bool {
     if std::env::var_os("WSL_DISTRO_NAME").is_some() || std::env::var_os("WSL_INTEROP").is_some() {
         return true;
     }
-    fs::read_to_string("/proc/version")
-        .is_ok_and(|v| v.to_ascii_lowercase().contains("microsoft"))
+    fs::read_to_string("/proc/version").is_ok_and(|v| v.to_ascii_lowercase().contains("microsoft"))
 }
 
 fn unquote(s: &str) -> String {

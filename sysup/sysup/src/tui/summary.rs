@@ -98,14 +98,21 @@ fn visible_len(s: &str) -> usize {
 // — the summary box is returned as a plain string (not drawn live), so this
 // avoids round-tripping through a ratatui widget just to stringify it.
 fn render_box(content_lines: &[String]) -> String {
-    let inner_width = content_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+    let inner_width = content_lines
+        .iter()
+        .map(|l| visible_len(l))
+        .max()
+        .unwrap_or(0);
     let h_pad = "  "; // Padding(1, 2): 2 cols left/right
     let horizontal = "─".repeat(inner_width + h_pad.len() * 2);
 
     let mut out = String::new();
     out.push_str(&style::dim(&format!("╭{horizontal}╮")));
     out.push('\n');
-    out.push_str(&style::dim(&format!("│{}│", " ".repeat(inner_width + h_pad.len() * 2))));
+    out.push_str(&style::dim(&format!(
+        "│{}│",
+        " ".repeat(inner_width + h_pad.len() * 2)
+    )));
     out.push('\n');
     for line in content_lines {
         let pad_right = " ".repeat(inner_width - visible_len(line));
@@ -117,7 +124,10 @@ fn render_box(content_lines: &[String]) -> String {
         out.push_str(&style::dim("│"));
         out.push('\n');
     }
-    out.push_str(&style::dim(&format!("│{}│", " ".repeat(inner_width + h_pad.len() * 2))));
+    out.push_str(&style::dim(&format!(
+        "│{}│",
+        " ".repeat(inner_width + h_pad.len() * 2)
+    )));
     out.push('\n');
     out.push_str(&style::dim(&format!("╰{horizontal}╯")));
     out
@@ -130,7 +140,11 @@ fn render_box(content_lines: &[String]) -> String {
 pub fn render_summary_box(results: &[StepResult], elapsed: Duration) -> String {
     let mut lines = vec![style::header("sysup update — resumo"), String::new()];
 
-    let max_name = results.iter().map(|r| r.name.chars().count()).max().unwrap_or(0);
+    let max_name = results
+        .iter()
+        .map(|r| r.name.chars().count())
+        .max()
+        .unwrap_or(0);
 
     for r in results {
         let (mark, detail) = if r.err.is_some() {
@@ -141,7 +155,11 @@ pub fn render_summary_box(results: &[StepResult], elapsed: Duration) -> String {
             let detail = summarize_step(&r.name, &r.output);
             (
                 style::ok("✔"),
-                if detail.is_empty() { "Concluído".to_string() } else { detail },
+                if detail.is_empty() {
+                    "Concluído".to_string()
+                } else {
+                    detail
+                },
             )
         };
 

@@ -37,9 +37,8 @@ pub fn verify_checksum(checksums_txt: &str, asset_name: &str, data: &[u8]) -> an
             break;
         }
     }
-    let want = want.ok_or_else(|| {
-        anyhow!("checksum de {} não encontrado em checksums.txt", asset_name)
-    })?;
+    let want =
+        want.ok_or_else(|| anyhow!("checksum de {} não encontrado em checksums.txt", asset_name))?;
 
     let mut hasher = Sha256::new();
     hasher.update(data);
