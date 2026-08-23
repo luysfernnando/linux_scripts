@@ -58,5 +58,7 @@
   },
   "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
-  "theme": "dark"
+  "theme": "dark",
+  "includeCoAuthoredBy": false,
+  "disableRemoteControl": true
 }
