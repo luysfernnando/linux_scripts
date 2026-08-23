@@ -1,7 +1,7 @@
 [user]
 	email = luysfernnando@gmail.com
 	name = Luys Fernnando
-	signingKey = ~/.ssh/id_luysfernnando_sign_commits.pub
+	signingKey = ~/.ssh/luysfernnando_sign_commits.pub
 [gpg]
 	format = ssh
 [gpg "ssh"]

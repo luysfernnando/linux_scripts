@@ -28,11 +28,16 @@ backup_and_link() {
   log_ok "$dst -> $src"
 }
 
-backup_and_link "$SHELL_DIR/.gitconfig" "$HOME/.gitconfig"
+backup_and_link "$SHELL_DIR/git/.gitconfig" "$HOME/.gitconfig"
+backup_and_link "$SHELL_DIR/git/allowed_signers" "$HOME/.ssh/allowed_signers"
 
-# .gitconfig usa assinatura SSH (gpg.format=ssh) — cada máquina precisa da
-# própria chave em ~/.ssh/id_luysfernnando_sign_commits (gerar com ssh-keygen
-# se não existir) cadastrada no GitHub como "Signing Key". Ver ricing/README.md.
+# .gitconfig usa assinatura SSH (gpg.format=ssh) — mesmo path de chave em
+# toda máquina (~/.ssh/luysfernnando_sign_commits, keypair distinto por máquina; gerar
+# com ssh-keygen se não existir), cadastrada no GitHub como "Signing Key".
+# allowed_signers é compartilhado via repo (symlink acima) pra qualquer
+# máquina verificar assinatura de commit feito em outra — depois de gerar
+# chave nova numa máquina, commitar o allowed_signers atualizado. Ver
+# ricing/README.md.
 
 # ---------------------------
 # Só linka o profile do shell que você realmente usa ($SHELL) — evita

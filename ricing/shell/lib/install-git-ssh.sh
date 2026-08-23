@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Sourced (não executado direto) — setup de assinatura de commit via SSH
-# (gpg.format=ssh, ver ricing/shell/.gitconfig) e do ssh-agent persistente
+# (gpg.format=ssh, ver ricing/shell/git/.gitconfig) e do ssh-agent persistente
 # que o GitKraken/git CLI usam pra autenticação. Idempotente: cada passo
 # checa antes de agir.
+#
+# SIGN_KEY tem o MESMO nome em toda máquina (keypair distinto por máquina,
+# path idêntico) — é o que deixa signingKey fixo no .gitconfig compartilhado
+# sem precisar de override local por máquina.
 
-SIGN_KEY="$HOME/.ssh/id_luysfernnando_sign_commits"
+SIGN_KEY="$HOME/.ssh/luysfernnando_sign_commits"
 ALLOWED_SIGNERS="$HOME/.ssh/allowed_signers"
 
 check_sign_key() { [[ -f "$SIGN_KEY.pub" ]]; }
@@ -30,11 +34,17 @@ install_sign_key() {
 
 check_allowed_signers() { [[ -f "$ALLOWED_SIGNERS" ]] && grep -qF "$(cat "$SIGN_KEY.pub" 2>/dev/null)" "$ALLOWED_SIGNERS" 2>/dev/null; }
 
+# ALLOWED_SIGNERS é symlink pro arquivo versionado no repo (ricing/shell/git/
+# allowed_signers) — acumula (append), nunca sobrescreve, senão perde a
+# chave de outras máquinas. Depois de rodar isso, commitar + dar push no
+# arquivo pra outras máquinas confiarem na chave nova.
 install_allowed_signers() {
   local email
   email="$(git config --global user.email 2>/dev/null || echo "$(whoami)@localhost")"
-  echo "$email $(cat "$SIGN_KEY.pub")" > "$ALLOWED_SIGNERS"
-  log_ok "$ALLOWED_SIGNERS atualizado"
+  mkdir -p "$(dirname "$ALLOWED_SIGNERS")"
+  touch "$ALLOWED_SIGNERS"
+  echo "$email $(cat "$SIGN_KEY.pub")" >> "$ALLOWED_SIGNERS"
+  log_ok "$ALLOWED_SIGNERS atualizado — commit + push nesse arquivo pra outras máquinas confiarem"
 }
 
 # ssh-agent via socket-activation do systemd (sobrevive ao terminal fechar,
@@ -51,7 +61,7 @@ install_ssh_agent_socket() {
 }
 
 # adiciona no agent toda chave privada em ~/.ssh que tenha uma .pub e ainda
-# não esteja carregada — cobre id_luysfernnando_sign_commits e outras
+# não esteja carregada — cobre luysfernnando_sign_commits e outras
 # (ex: gitkraken_rsa) sem precisar listar nome por nome.
 check_keys_loaded() {
   export SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket}"
