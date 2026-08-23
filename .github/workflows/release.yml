@@ -9,22 +9,87 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            worker: true
+          - os: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            worker: true
+            cross_linker: aarch64-linux-gnu-gcc
+            cross_pkg: gcc-aarch64-linux-gnu
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version-file: sysup/go.mod
-          cache-dependency-path: sysup/go.sum
+          targets: ${{ matrix.target }}
 
-      - uses: goreleaser/goreleaser-action@v6
+      - name: install cross-linker
+        if: matrix.cross_pkg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.cross_pkg }}
+
+      - name: cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+          workspaces: sysup
+
+      - name: build sysup
+        working-directory: sysup
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SYSUP_VERSION: ${{ github.ref_name }}
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.cross_linker }}
+        run: cargo build --release --locked -p sysup --target ${{ matrix.target }}
+
+      - name: build sysup-worker
+        if: matrix.worker
+        working-directory: sysup
+        shell: bash
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.cross_linker }}
+        run: cargo build --release --locked -p sysup-worker --target ${{ matrix.target }}
+
+      - name: package
+        working-directory: sysup/target/${{ matrix.target }}/release
+        run: |
+          tar czf sysup_${{ matrix.os }}_${{ matrix.arch }}.tar.gz sysup
+          if [ -f sysup-worker ]; then
+            tar czf sysup-worker_${{ matrix.os }}_${{ matrix.arch }}.tar.gz sysup-worker
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            sysup/target/${{ matrix.target }}/release/sysup_*.tar.gz
+            sysup/target/${{ matrix.target }}/release/sysup-worker_*.tar.gz
+          if-no-files-found: ignore
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: checksums
+        working-directory: dist
+        run: sha256sum * > checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
