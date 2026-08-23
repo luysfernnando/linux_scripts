@@ -1,109 +1,27 @@
-# Code Review Standards
+# Code Review
 
-## Purpose
+## When
 
-Code review ensures quality, security, and maintainability before code is merged. This rule defines when and how to conduct code reviews.
+After writing/modifying code, before commit to shared branches, on security-sensitive or architectural changes, before merging PRs.
 
-## When to Review
+## Checks
 
-**MANDATORY review triggers:**
+Applies [coding-style.md](coding-style.md) principles, plus:
 
-- After writing or modifying code
-- Before any commit to shared branches
-- When security-sensitive code is changed (auth, payments, user data)
-- When architectural changes are made
-- Before merging pull requests
+- Readable, well-named; functions <50 lines, files <800 lines, nesting ≤4 levels; no mutation
+- No hardcoded secrets, unvalidated input, string-concat SQL, or unsanitized output
+- Auth/authz correct on any changed endpoint; errors leak nothing sensitive
+- No N+1 queries, missing pagination, unbounded queries, or missing caching on hot paths
 
-**Pre-Review Requirements:**
+## Severity → action
 
-Before requesting review, ensure:
+| Level | Action |
+|---|---|
+| CRITICAL (security/data loss) | Block, must fix |
+| HIGH (bug/quality) | Should fix before merge |
+| MEDIUM (maintainability) | Consider fixing |
+| LOW (style) | Optional |
 
-- All automated checks (CI/CD) are passing
-- Merge conflicts are resolved
-- Branch is up to date with target branch
+Approve = no CRITICAL/HIGH. HIGH-only = merge with caution. Any CRITICAL = block.
 
-## Review Checklist
-
-Before marking code complete:
-
-- [ ] Code is readable and well-named
-- [ ] Functions are focused (<50 lines)
-- [ ] Files are cohesive (<800 lines)
-- [ ] No deep nesting (>4 levels)
-- [ ] Errors are handled explicitly
-- [ ] No hardcoded secrets or credentials
-- [ ] No console.log or debug statements
-- [ ] Tests exist for new functionality
-- [ ] Test coverage meets 80% minimum
-
-## Security Review Triggers
-
-**STOP and review carefully when:**
-
-- Authentication or authorization code
-- User input handling
-- Database queries
-- File system operations
-- External API calls
-- Cryptographic operations
-- Payment or financial code
-
-## Review Severity Levels
-
-| Level | Meaning | Action |
-|-------|---------|--------|
-| CRITICAL | Security vulnerability or data loss risk | **BLOCK** - Must fix before merge |
-| HIGH | Bug or significant quality issue | **WARN** - Should fix before merge |
-| MEDIUM | Maintainability concern | **INFO** - Consider fixing |
-| LOW | Style or minor suggestion | **NOTE** - Optional |
-
-## Review Workflow
-
-```
-1. Run git diff to understand changes
-2. Check security checklist first
-3. Review code quality checklist
-4. Run relevant tests
-5. Verify coverage >= 80%
-```
-
-## Common Issues to Catch
-
-### Security
-
-- Hardcoded credentials (API keys, passwords, tokens)
-- SQL injection (string concatenation in queries)
-- XSS vulnerabilities (unescaped user input)
-- Path traversal (unsanitized file paths)
-- CSRF protection missing
-- Authentication bypasses
-
-### Code Quality
-
-- Large functions (>50 lines) - split into smaller
-- Large files (>800 lines) - extract modules
-- Deep nesting (>4 levels) - use early returns
-- Missing error handling - handle explicitly
-- Mutation patterns - prefer immutable operations
-- Missing tests - add test coverage
-
-### Performance
-
-- N+1 queries - use JOINs or batching
-- Missing pagination - add LIMIT to queries
-- Unbounded queries - add constraints
-- Missing caching - cache expensive operations
-
-## Approval Criteria
-
-- **Approve**: No CRITICAL or HIGH issues
-- **Warning**: Only HIGH issues (merge with caution)
-- **Block**: CRITICAL issues found
-
-## Integration with Other Rules
-
-This rule works with:
-
-- [testing.md](testing.md) - Test coverage requirements
-- [security.md](security.md) - Security checklist
-- [git-workflow.md](git-workflow.md) - Commit standards
+Before requesting review: CI green, no merge conflicts, branch up to date ([workflow.md](workflow.md)).
