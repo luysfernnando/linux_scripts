@@ -85,7 +85,10 @@ pub fn run() -> anyhow::Result<()> {
             println!("sysup {}", selfupdate::VERSION);
             Ok(())
         }
-        Command::Update { dry_run, no_self_update } => run_update(dry_run, no_self_update),
+        Command::Update {
+            dry_run,
+            no_self_update,
+        } => run_update(dry_run, no_self_update),
         Command::Mirrors { dry_run } => {
             let family = detect::detect_family();
             let t = detect::detect_tools();
@@ -150,7 +153,9 @@ fn maybe_install_paccache(dry_run: bool, t: &mut detect::Tools) {
     if dry_run {
         println!(
             "{}",
-            style::dim("==> paccache ausente (pacman-contrib) — pulando prompt de instalação em --dry-run")
+            style::dim(
+                "==> paccache ausente (pacman-contrib) — pulando prompt de instalação em --dry-run"
+            )
         );
         return;
     }
@@ -165,7 +170,10 @@ fn maybe_install_paccache(dry_run: bool, t: &mut detect::Tools) {
     }
     let answer = answer.trim().to_lowercase();
     if answer != "y" && answer != "yes" && answer != "s" && answer != "sim" {
-        println!("{}", style::dim("==> ok, limpeza de cache vai ser pulada nesta run"));
+        println!(
+            "{}",
+            style::dim("==> ok, limpeza de cache vai ser pulada nesta run")
+        );
         return;
     }
 
@@ -199,8 +207,18 @@ fn round_secs(d: Duration) -> Duration {
 }
 
 fn run_update(dry_run: bool, no_self_update: bool) -> anyhow::Result<()> {
+    // Captured before self_update runs: once it replaces the binary on
+    // disk, re-resolving our own exe path would hit the Linux "(deleted)"
+    // quirk on self-rename (see selfupdate::re_exec's doc comment).
+    let exe_path = std::env::current_exe().ok();
     if !no_self_update && selfupdate::self_update(dry_run) {
-        if let Err(e) = selfupdate::re_exec() {
+        let re_exec_result = match &exe_path {
+            Some(path) => selfupdate::re_exec(path),
+            None => Err(anyhow::anyhow!(
+                "não foi possível resolver o caminho do executável atual"
+            )),
+        };
+        if let Err(e) = re_exec_result {
             // re_exec only returns on failure — a successful call replaces
             // the process image and never comes back here at all.
             eprintln!(

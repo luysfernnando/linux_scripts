@@ -259,8 +259,14 @@ pub fn try_update_dotfiles_repo(dry_run: bool) {
 // ReExec replaces the current process with a fresh invocation of the
 // (now-updated) binary at the same path, so the rest of `sysup update`
 // runs the new code instead of whatever is still loaded in memory.
-pub fn re_exec() -> anyhow::Result<()> {
-    let self_path = std::env::current_exe()?;
+//
+// Takes the exe path as a parameter rather than resolving it itself: once
+// self_update has replaced the file on disk (via rename over the running
+// binary), the kernel treats the process's original inode as unlinked, so a
+// fresh std::env::current_exe() call returns "<path> (deleted)" instead of
+// the real path — exec() on that string then fails with ENOENT. Callers
+// must capture the path *before* calling self_update.
+pub fn re_exec(self_path: &Path) -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let err = Command::new(self_path).args(args).exec();
     // exec() only returns on failure — a successful call never comes back.
