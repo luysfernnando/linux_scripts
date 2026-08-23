@@ -9,7 +9,7 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 # Path do próprio lib (não do chamador) — pra achar o tema independente de
 # quem deu source (install.sh usa SHELL_DIR, install-menu.sh usa REPO_DIR).
 _ZSH_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STARSHIP_THEME_SRC="$_ZSH_LIB_DIR/../zsh/tema/starship.toml"
+STARSHIP_THEME_SRC="$_ZSH_LIB_DIR/../starship/linux.toml"
 
 check_ohmyzsh() { [[ -d "$HOME/.oh-my-zsh" ]]; }
 install_ohmyzsh() {

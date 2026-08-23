@@ -79,6 +79,11 @@ alias lla 'lsd -la'
 alias lstree 'lsd --tree'
 
 # ---------------------------
+# STARSHIP PROMPT (tema em ricing/shell/starship/linux.toml, symlinkado por install-zsh-plugins.sh)
+# ---------------------------
+starship init fish | source
+
+# ---------------------------
 # UPDATE (engine sysup, cross-distro)
 # ---------------------------
 alias update 'sysup update'
