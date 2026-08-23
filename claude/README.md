@@ -7,21 +7,13 @@ Skills e rules Claude Code criadas por mim. Versionadas aqui, sincronizadas pra 
 
 ## Setup
 
-```bash
-bash claude/install.sh
-```
+`bash claude/install.sh` — idempotente, roda de novo qualquer hora.
 
-Idempotente — roda de novo qualquer hora, sincroniza mudanças do repo.
+## Adicionar skill/rule nova
 
-## Adicionar skill nova
-
-1. Criar `claude/skills/<nome>/SKILL.md` (frontmatter `name`/`description`/`allowed-tools` + corpo).
-2. Rodar `bash claude/install.sh`.
-
-## Adicionar/editar rule
-
-1. Editar/criar `claude/rules/common/<nome>.md` (regra geral) ou `claude/rules/<lang>/<nome>.md` (regra específica de linguagem, ex: `rust/`).
-2. Rodar `bash claude/install.sh`.
+1. Skill: criar `claude/skills/<nome>/SKILL.md` (frontmatter `name`/`description`/`allowed-tools` + corpo).
+2. Rule: criar/editar `claude/rules/common/<nome>.md` (geral) ou `claude/rules/<lang>/<nome>.md` (linguagem, ex: `rust/`).
+3. `bash claude/install.sh`.
 
 ## Skills
 
@@ -37,5 +29,5 @@ Idempotente — roda de novo qualquer hora, sincroniza mudanças do repo.
 
 | Categoria | Arquivos |
 |---|---|
-| `common/` | code-review, coding-style, development-workflow, git-workflow, hooks, patterns, performance, security, testing |
+| `common/` | code-review, coding-style, workflow, delegation, context-economy, edit-markdown |
 | `rust/` | coding-style, hooks, patterns, security, testing |

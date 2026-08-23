@@ -64,9 +64,7 @@ Layout por pacote (`internal/*`), release e detalhe completo do worker de privil
 
 ## Claude Skills & Rules
 
-`claude/skills/` → `claude/install.sh` replica pra `~/.agents/skills/<nome>/` + symlink em `~/.claude/skills/<nome>`. Nova skill: criar `claude/skills/<nome>/SKILL.md`, rodar o install.
-
-`claude/rules/` (`common/` + `rust/`) → mesmo install.sh sincroniza pra `~/.claude/rules/`. Ver `claude/README.md`.
+`claude/skills/` e `claude/rules/` (`common/`+`rust/`) sincronizados via `claude/install.sh` pra `~/.agents/skills/`/`~/.claude/skills/` e `~/.claude/rules/`. Nova skill/rule + sync: ver `claude/README.md`.
 
 ## Gotchas conhecidos
 
