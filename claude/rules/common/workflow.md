@@ -1,15 +1,10 @@
 # Development Workflow
 
-## Reuse check (before new non-trivial code)
+Reuse check (skip for bug fixes/one-liners/config tweaks): new module/algorithm/integration → check codebase, then package registry (npm/PyPI/crates.io/...) + docs, before hand-rolling. Battle-tested dependency > new code for a solved problem.
 
-Skip for bug fixes, one-line edits, or config tweaks. Applies when building a new module, algorithm, or integration: check codebase for an existing implementation first, then the language's package registry (npm/PyPI/crates.io/...) and library docs, before hand-rolling. Prefer a battle-tested dependency over new code that solves an already-solved problem.
+Loop: reuse check → plan (phases, deps, risks) → code ([coding-style.md](coding-style.md)) → review ([code-review.md](code-review.md)) → commit.
 
-## Loop
-
-Reuse check → plan (phases, deps, risks) → code ([coding-style.md](coding-style.md)) → review ([code-review.md](code-review.md)) → commit.
-
-## Commit message
-
+Commit message:
 ```
 <type>: <description>
 
@@ -17,6 +12,4 @@ Reuse check → plan (phases, deps, risks) → code ([coding-style.md](coding-st
 ```
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-## PR
-
-Diff full branch history (`git diff [base]...HEAD`, not just last commit) → comprehensive summary + test-plan TODOs → push `-u` if new branch. Pre-req: CI green, no conflicts, branch current with target.
+PR: diff full branch history (`git diff [base]...HEAD`, not just last commit) → summary + test-plan TODOs → push `-u` if new branch. Pre-req: CI green, no conflicts, branch current with target.

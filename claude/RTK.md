@@ -1,29 +1,14 @@
 # RTK - Rust Token Killer
 
-**Usage**: Token-optimized CLI proxy (cuts up to 90% of bash output)
+Token-optimized CLI proxy — cuts up to 90% of bash output. All Bash commands auto-rewritten by hook (`git status` → `rtk git status`, transparent, 0 extra tokens).
 
-## Meta Commands (always use rtk directly)
-
-```bash
-rtk gain              # Show token savings analytics
-rtk gain --history    # Show command usage history with savings
-rtk discover          # Analyze Claude Code history for missed opportunities
-rtk proxy <cmd>       # Execute raw command without filtering (for debugging)
-```
-
-## Installation Verification
+## Meta commands (call directly, hook doesn't rewrite these)
 
 ```bash
-rtk --version         # Should show: rtk X.Y.Z
-rtk gain              # Should work (not "command not found")
-which rtk             # Verify correct binary
+rtk gain              # token savings analytics
+rtk gain --history    # usage history + savings
+rtk discover          # find missed optimization opportunities
+rtk proxy <cmd>       # raw output, no filtering (debug)
 ```
 
-⚠️ **Name collision**: If `rtk gain` fails, you may have reachingforthejack/rtk (Rust Type Kit) installed instead.
-
-## Hook-Based Usage
-
-All other commands are automatically rewritten by the Claude Code hook.
-Example: `git status` → `rtk git status` (transparent, 0 tokens overhead)
-
-Refer to CLAUDE.md for full command reference.
+Broken (`rtk gain` fails / unknown command)? `which rtk` — reachingforthejack/rtk (Rust Type Kit) name-collides. Verify with `rtk --version`.
