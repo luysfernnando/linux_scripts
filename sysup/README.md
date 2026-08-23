@@ -2,9 +2,9 @@
 
 Engine de update cross-distro/cross-OS em Rust, self-updating. Binário único (`sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup [--dry-run]`), substitui scripts/aliases antigos de update. Standalone — não depende do repo continuar clonado (só dotfiles em si dependem).
 
-Workspace Cargo com 3 crates: `sysup` (CLI), `sysup-worker` (helper privilegiado, linux-only), `sysup-workerproto` (protocolo compartilhado entre os dois).
+Workspace Cargo com 3 crates: `cli` (pacote `sysup`, binário `sysup`), `worker` (pacote `sysup-worker`, helper privilegiado, linux-only), `ipc` (protocolo/socket compartilhado entre os dois).
 
-## Layout (`sysup/sysup/src`)
+## Layout (`sysup/cli/src`)
 
 | Módulo | Faz |
 |---|---|

@@ -1,5 +1,5 @@
 [package]
-name = "sysup-workerproto"
+name = "ipc"
 version.workspace = true
 edition.workspace = true
 

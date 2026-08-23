@@ -14,7 +14,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use sysup_workerproto::Status;
+use ipc::Status;
 
 use crate::whitelist::which;
 
@@ -45,11 +45,11 @@ fn try_worker(sock: &str, argv: &[String]) -> bool {
         _ => return false,
     };
 
-    if sysup_workerproto::write_request(&conn, argv).is_err() {
+    if ipc::write_request(&conn, argv).is_err() {
         return false;
     }
 
-    let (status, msg) = match sysup_workerproto::relay_output(std::io::stdout(), &conn) {
+    let (status, msg) = match ipc::relay_output(std::io::stdout(), &conn) {
         Ok(result) => result,
         Err(_) => return false,
     };

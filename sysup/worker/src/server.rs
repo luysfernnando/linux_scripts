@@ -12,13 +12,13 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use sysup_workerproto::Status;
+use ipc::Status;
 
 use crate::whitelist::allowed_command;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut socket_path = sysup_workerproto::socket_path();
+    let mut socket_path = ipc::socket_path();
     let mut i = 0;
     while i < args.len() {
         if args[i] == "--socket" && i + 1 < args.len() {
@@ -43,8 +43,7 @@ pub fn main() {
         }
     };
 
-    if let Err(e) = std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o600))
-    {
+    if let Err(e) = std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o600)) {
         eprintln!("sysup-worker: chmod do socket falhou: {e}");
         std::process::exit(1);
     }
@@ -110,14 +109,10 @@ pub fn main() {
 
 fn handle_conn(conn: UnixStream) {
     let mut reader = BufReader::new(&conn);
-    let argv = match sysup_workerproto::read_request(&mut reader) {
+    let argv = match ipc::read_request(&mut reader) {
         Ok(argv) => argv,
         Err(e) => {
-            let _ = sysup_workerproto::write_trailer(
-                &conn,
-                Status::Rejected,
-                &format!("pedido inválido: {e}"),
-            );
+            let _ = ipc::write_trailer(&conn, Status::Rejected, &format!("pedido inválido: {e}"));
             return;
         }
     };
@@ -125,7 +120,7 @@ fn handle_conn(conn: UnixStream) {
     let resolved = match allowed_command(&argv) {
         Some(resolved) => resolved,
         None => {
-            let _ = sysup_workerproto::write_trailer(
+            let _ = ipc::write_trailer(
                 &conn,
                 Status::Rejected,
                 &format!("comando não permitido: {}", argv.join(" ")),
@@ -137,14 +132,14 @@ fn handle_conn(conn: UnixStream) {
     let stdout_fd = match conn.try_clone() {
         Ok(c) => c,
         Err(e) => {
-            let _ = sysup_workerproto::write_trailer(&conn, Status::Failed, &e.to_string());
+            let _ = ipc::write_trailer(&conn, Status::Failed, &e.to_string());
             return;
         }
     };
     let stderr_fd = match conn.try_clone() {
         Ok(c) => c,
         Err(e) => {
-            let _ = sysup_workerproto::write_trailer(&conn, Status::Failed, &e.to_string());
+            let _ = ipc::write_trailer(&conn, Status::Failed, &e.to_string());
             return;
         }
     };
@@ -157,17 +152,17 @@ fn handle_conn(conn: UnixStream) {
 
     match status {
         Ok(status) if status.success() => {
-            let _ = sysup_workerproto::write_trailer(&conn, Status::Ok, "");
+            let _ = ipc::write_trailer(&conn, Status::Ok, "");
         }
         Ok(status) => {
             let msg = match status.code() {
                 Some(code) => format!("exit status {code}"),
                 None => "exit status desconhecido (sinal)".to_string(),
             };
-            let _ = sysup_workerproto::write_trailer(&conn, Status::Failed, &msg);
+            let _ = ipc::write_trailer(&conn, Status::Failed, &msg);
         }
         Err(e) => {
-            let _ = sysup_workerproto::write_trailer(&conn, Status::Failed, &e.to_string());
+            let _ = ipc::write_trailer(&conn, Status::Failed, &e.to_string());
         }
     }
 }

@@ -749,6 +749,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ipc"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1479,6 +1488,7 @@ dependencies = [
  "clap",
  "crossterm",
  "flate2",
+ "ipc",
  "nix",
  "ratatui",
  "regex",
@@ -1487,7 +1497,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "sysup-workerproto",
  "tar",
  "thiserror 1.0.69",
  "which",
@@ -1498,17 +1507,8 @@ name = "sysup-worker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ipc",
  "nix",
- "sysup-workerproto",
-]
-
-[[package]]
-name = "sysup-workerproto"
-version = "0.1.0"
-dependencies = [
- "libc",
- "serde",
- "serde_json",
 ]
 
 [[package]]

@@ -423,10 +423,7 @@ mod tests {
 
     #[test]
     fn dnf_exact_invocations_allowed() {
-        assert_eq!(
-            dnf_ok(&s(&["upgrade", "-y"])),
-            Some(s(&["upgrade", "-y"]))
-        );
+        assert_eq!(dnf_ok(&s(&["upgrade", "-y"])), Some(s(&["upgrade", "-y"])));
         assert_eq!(
             dnf_ok(&s(&["autoremove", "-y"])),
             Some(s(&["autoremove", "-y"]))
@@ -441,10 +438,7 @@ mod tests {
 
     #[test]
     fn zypper_exact_invocation_allowed() {
-        assert_eq!(
-            zypper_ok(&s(&["update", "-y"])),
-            Some(s(&["update", "-y"]))
-        );
+        assert_eq!(zypper_ok(&s(&["update", "-y"])), Some(s(&["update", "-y"])));
     }
 
     #[test]
@@ -463,10 +457,7 @@ mod tests {
 
     #[test]
     fn npm_arbitrary_invocation_rejected() {
-        assert_eq!(
-            npm_ok(&s(&["install", "-g", "some-other-package"])),
-            None
-        );
+        assert_eq!(npm_ok(&s(&["install", "-g", "some-other-package"])), None);
     }
 
     #[test]

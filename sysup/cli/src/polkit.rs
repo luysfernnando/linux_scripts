@@ -12,7 +12,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use sysup_workerproto::Status;
+use ipc::Status;
 
 use crate::detect::{self, Family};
 use crate::download;
@@ -482,7 +482,7 @@ impl WorkerClient {
             return Ok(WorkerClient { inner: None });
         }
 
-        let socket_path = sysup_workerproto::socket_path();
+        let socket_path = ipc::socket_path();
 
         let mut child = Command::new("pkexec")
             .arg(helper_install_path())
@@ -545,9 +545,9 @@ impl WorkerClient {
 
         let conn = UnixStream::connect(&inner.socket_path).context("conectando no worker")?;
 
-        sysup_workerproto::write_request(&conn, argv).context("mandando pedido pro worker")?;
+        ipc::write_request(&conn, argv).context("mandando pedido pro worker")?;
 
-        let (status, msg) = sysup_workerproto::relay_output(out, &conn)?;
+        let (status, msg) = ipc::relay_output(out, &conn)?;
         match status {
             Status::Ok => Ok(()),
             // Rejected (bad request / not whitelisted) and Failed (ran but
