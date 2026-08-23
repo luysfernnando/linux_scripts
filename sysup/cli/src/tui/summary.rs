@@ -44,6 +44,9 @@ fn summarize_step(name: &str, output: &str) -> String {
     if name == "Flatpak" {
         return summarize_flatpak(output);
     }
+    if name == "Repo dotfiles" {
+        return summarize_dotfiles(output);
+    }
     String::new()
 }
 
@@ -82,6 +85,19 @@ fn summarize_npm(output: &str) -> String {
 fn summarize_flatpak(output: &str) -> String {
     if output.contains("Nothing to update") {
         return "Já estava tudo atualizado".to_string();
+    }
+    String::new()
+}
+
+fn summarize_dotfiles(output: &str) -> String {
+    if output.contains("Already up to date.") {
+        return "Já estava tudo atualizado".to_string();
+    }
+    if output.contains("sujo ou inacessível") {
+        return "Pulado (repositório sujo)".to_string();
+    }
+    if !output.trim().is_empty() {
+        return "Atualizado".to_string();
     }
     String::new()
 }

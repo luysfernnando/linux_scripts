@@ -9,6 +9,7 @@ use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 
+use crate::pipeline;
 use crate::style;
 
 // repoSlug identifies the GitHub repo release assets are fetched from —
@@ -246,44 +247,57 @@ fn replace_via_copy(new_path: &Path, target: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-// TryUpdateDotfilesRepo does a best-effort `git pull --ff-only` on the repo
-// clone that install.sh recorded, so dotfiles stay fresh for people who
-// cloned the repo. It's entirely optional: no marker file, no repo, or a
-// dirty/diverged tree just means we skip silently — never blocks `update`.
-pub fn try_update_dotfiles_repo(dry_run: bool) {
-    let Some(home) = std::env::home_dir() else {
-        return;
-    };
+// Whether install.sh recorded a dotfiles repo clone to git-pull — gates
+// whether dotfiles_pull_step is added to the pipeline at all, so machines
+// installed straight from a release (no repo-path marker) never show a
+// step with nothing to do.
+pub fn dotfiles_repo_configured() -> Option<String> {
+    let home = std::env::home_dir()?;
     let marker = home.join(".config").join("sysup").join("repo-path");
-    let Ok(data) = std::fs::read_to_string(&marker) else {
-        return;
-    };
-    let repo = data.trim();
+    let repo = std::fs::read_to_string(&marker).ok()?.trim().to_string();
     if repo.is_empty() {
-        return;
+        None
+    } else {
+        Some(repo)
     }
+}
 
-    let status = Command::new("git")
-        .args(["-C", repo, "status", "--porcelain"])
-        .output();
-    match status {
-        Ok(out) if out.status.success() && out.stdout.is_empty() => {}
-        _ => return,
-    }
+// Best-effort `git pull --ff-only` on the dotfiles repo clone, as a
+// pipeline step so its command/output/status render in the same
+// TUI/summary as every other step instead of printing ahead of it (the bug
+// report this fixes: it used to run and print before the dashboard even
+// started). A dirty/diverged tree, or the pull itself failing, only warns
+// — never fails the step, so it never blocks the rest of `update`.
+pub fn dotfiles_pull_step(repo: String) -> pipeline::Step {
+    pipeline::Step {
+        name: "Repo dotfiles".to_string(),
+        needs_privilege: false,
+        run: Box::new(move |dry_run, out| {
+            let status = Command::new("git")
+                .args(["-C", &repo, "status", "--porcelain"])
+                .output();
+            match status {
+                Ok(o) if o.status.success() && o.stdout.is_empty() => {}
+                _ => {
+                    writeln!(
+                        out,
+                        "{}",
+                        style::dim("==> repo dotfiles: pulando (sujo ou inacessível)")
+                    )?;
+                    return Ok(());
+                }
+            }
 
-    let line = format!("git -C {repo} pull --ff-only");
-    println!("{}", style::dim(&format!("==> repo dotfiles: {line}")));
-    if dry_run {
-        return;
-    }
-    if let Err(e) = Command::new("git")
-        .args(["-C", repo, "pull", "--ff-only"])
-        .status()
-    {
-        eprintln!(
-            "{}",
-            style::warn(&format!("aviso: git pull do repo dotfiles falhou: {e}"))
-        );
+            let line = format!("git -C {repo} pull --ff-only");
+            if let Err(e) = pipeline::run_shell(dry_run, &line, out) {
+                writeln!(
+                    out,
+                    "{}",
+                    style::warn(&format!("aviso: git pull do repo dotfiles falhou: {e}"))
+                )?;
+            }
+            Ok(())
+        }),
     }
 }
 

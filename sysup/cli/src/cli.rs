@@ -237,9 +237,6 @@ fn run_update(dry_run: bool, no_self_update: bool, self_update_only: bool) -> an
     if self_update_only {
         return Ok(());
     }
-    // Best-effort: a stale/dirty dotfiles clone, or no clone at all, should
-    // never block the actual system update.
-    selfupdate::try_update_dotfiles_repo(dry_run);
 
     let start = Instant::now();
     let family = detect::detect_family();
@@ -288,6 +285,10 @@ fn run_update(dry_run: bool, no_self_update: bool, self_update_only: bool) -> an
                 }),
             },
         );
+    }
+
+    if let Some(repo) = selfupdate::dotfiles_repo_configured() {
+        parallel_steps.insert(0, selfupdate::dotfiles_pull_step(repo));
     }
 
     let used_tui = tui::available(dry_run);
