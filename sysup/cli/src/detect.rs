@@ -81,7 +81,25 @@ fn contains_any(haystack: &str, needles: &[&str]) -> bool {
 }
 
 pub fn has_tool(name: &str) -> bool {
-    which::which(name).is_ok()
+    which::which(name)
+        .map(|path| !is_wsl_interop_path(&path))
+        .unwrap_or(false)
+}
+
+// WSL mounts the Windows filesystem under /mnt/<drive-letter>/ — a tool
+// resolved there (e.g. npm/composer installed only on the Windows side) is
+// a Windows executable reachable via WSL interop, not a real Linux binary.
+// It works fine in an interactive user shell but is never invokable
+// through `sudo` (secure_path never includes /mnt/*), so treating it as
+// "present" would make the pipeline detect a tool it can never actually
+// run as root — exactly the "sudo: npm: command not found" failure this
+// guards against.
+fn is_wsl_interop_path(path: &std::path::Path) -> bool {
+    use std::path::Component;
+    let mut components = path.components();
+    matches!(components.next(), Some(Component::RootDir))
+        && matches!(components.next(), Some(Component::Normal(c)) if c == "mnt")
+        && matches!(components.next(), Some(Component::Normal(c)) if c.len() == 1)
 }
 
 // Bundles the presence checks the pipeline needs, computed once per run.
@@ -129,5 +147,28 @@ pub fn detect_tools() -> Tools {
         notify_send: has_tool("notify-send"),
         pkexec: has_tool("pkexec"),
         paccache: has_tool("paccache"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn rejects_windows_interop_paths() {
+        assert!(is_wsl_interop_path(Path::new(
+            "/mnt/c/Program Files/nodejs/npm"
+        )));
+        assert!(is_wsl_interop_path(Path::new("/mnt/d/tools/npm")));
+    }
+
+    #[test]
+    fn accepts_real_linux_paths() {
+        assert!(!is_wsl_interop_path(Path::new("/usr/bin/npm")));
+        assert!(!is_wsl_interop_path(Path::new("/home/user/.local/bin/npm")));
+        // "/mnt/something-else" with a multi-char segment isn't a WSL
+        // drive mount (e.g. a manually mounted /mnt/data).
+        assert!(!is_wsl_interop_path(Path::new("/mnt/data/npm")));
     }
 }
