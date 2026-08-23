@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["sysup", "sysup-worker", "sysup-workerproto"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"

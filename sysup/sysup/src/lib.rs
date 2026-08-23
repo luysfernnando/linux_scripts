@@ -1,0 +1,12 @@
+pub mod cli;
+pub mod detect;
+pub mod download;
+pub mod mirrors;
+pub mod notify;
+pub mod pipeline;
+pub mod polkit;
+pub mod schedule;
+pub mod selfupdate;
+pub mod style;
+pub mod tools;
+pub mod tui;

@@ -1,36 +1,38 @@
 # sysup
 
-Engine de update cross-distro/cross-OS em Go, self-updating. Binário único (`sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup [--dry-run]`), substitui scripts/aliases antigos de update. Standalone — não depende do repo continuar clonado (só dotfiles em si dependem).
+Engine de update cross-distro/cross-OS em Rust, self-updating. Binário único (`sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup [--dry-run]`), substitui scripts/aliases antigos de update. Standalone — não depende do repo continuar clonado (só dotfiles em si dependem).
 
-## Layout
+Workspace Cargo com 3 crates: `sysup` (CLI), `sysup-worker` (helper privilegiado, linux-only), `sysup-workerproto` (protocolo compartilhado entre os dois).
 
-| Pacote | Faz |
+## Layout (`sysup/sysup/src`)
+
+| Módulo | Faz |
 |---|---|
-| `cmd/sysup/main.go` | Entrypoint fino, chama `internal/cli.Run()` |
-| `internal/cli` | Dispatch de subcomandos + orquestra `update` (self-update → worker polkit → pipeline → TUI/plain → resumo) |
-| `internal/detect` | Detecta família do SO (`/etc/os-release` Linux, `runtime.GOOS` mac/Windows) + ferramentas opcionais instaladas (yay/paru, flatpak, brew, composer, npm, bun, fwupdmgr, choco/winget, pkexec) |
-| `internal/style` | Helpers ANSI (`Ok`/`Fail`/`Warn`/`Dim`/`Header`/`Colorize`), pacote-folha sem dependência interna |
-| `internal/pipeline` | Monta steps por família: paralelo (pacotes, flatpak, composer, npm, bun, firmware — goroutines, output prefixado `[nome]`) + serial (órfãos + cache, roda só depois do paralelo terminar) |
-| `internal/polkit` + `cmd/sysup-worker` | Worker de elevação de privilégio de vida curta — ver seção Privilégio abaixo |
-| `internal/download` | Baixa+extrai+confere checksum (compartilhado por `internal/polkit` pro `sysup-worker` e `internal/tools` pro GitKraken) |
-| `internal/mirrors` | Rankeia mirrors (reflector/cachyos-rate-mirrors), guarda timestamp em `~/.local/state/sysup/last-mirror-check`, re-rankeia sozinho a cada 7 dias. Filtro geográfico opcional via `~/.config/sysup/mirror-country` |
-| `internal/selfupdate` | Compara versão embutida (`-ldflags` setado pelo GoReleaser) com última release GitHub, baixa+substitui binário rodando via `syscall.Exec`; falha só loga aviso, nunca aborta o update. Também tenta `git pull --ff-only` nos dotfiles via `~/.config/sysup/repo-path` |
-| `internal/tools` | Portas de `gitkraken-install-or-update.sh`/`tidewave.sh` pro Go (download, safe-swap, wrapper `UPDATE_ON_START`, `fix-codex-acp`). Fora do pipeline automático — sem checagem de versão, sempre rebaixam o asset inteiro, ficam como subcomandos explícitos |
-| `internal/schedule` | Agendador nativo (systemd user timer / launchd / schtasks) pros mirrors, via `sysup schedule` |
-| `internal/tui` | Dashboard full-screen (Bubble Tea + Lip Gloss + Bubbles) quando stdout é terminal real e não `--dry-run` — spinner, progresso `(N/TOTAL)` lido da saída do pacman, resumo final em caixa (`tui.RenderSummaryBox`). Fallback plain (`runUpdatePlain`) fora de terminal/CI/`NO_COLOR`/`--dry-run` |
+| `main.rs` | Entrypoint fino, chama `cli::run()` |
+| `cli.rs` | Dispatch de subcomandos (clap) + orquestra `update` (self-update → worker polkit → pipeline → TUI/plain → resumo) |
+| `detect.rs` | Detecta família do SO (`/etc/os-release` Linux, `std::env::consts::OS` mac/Windows) + ferramentas opcionais instaladas (yay/paru, flatpak, brew, composer, npm, bun, fwupdmgr, choco/winget, pkexec, paccache) |
+| `style.rs` | Helpers ANSI (`ok`/`fail`/`warn`/`dim`/`header`), módulo-folha sem dependência interna |
+| `pipeline.rs` | Monta steps por família: paralelo (pacotes, flatpak, composer, npm, bun, firmware — threads, output prefixado `[nome]`) + serial (órfãos + cache, roda só depois do paralelo terminar) |
+| `polkit.rs` + `sysup-worker/` | Worker de elevação de privilégio de vida curta — ver seção Privilégio abaixo |
+| `download.rs` | Baixa+extrai+confere checksum (compartilhado pelo `selfupdate`, `polkit` pro `sysup-worker` e `tools` pro GitKraken) |
+| `mirrors.rs` | Rankeia mirrors (reflector/cachyos-rate-mirrors), guarda timestamp em `~/.local/state/sysup/last-mirror-check`, re-rankeia sozinho a cada 7 dias. Filtro geográfico opcional via `~/.config/sysup/mirror-country` |
+| `selfupdate.rs` | Compara versão embutida (`SYSUP_VERSION` setado no build via env) com última release GitHub, baixa+substitui binário rodando via `exec()`; falha só loga aviso, nunca aborta o update. Também tenta `git pull --ff-only` nos dotfiles via `~/.config/sysup/repo-path` |
+| `tools/` | Portas de `gitkraken-install-or-update.sh`/`tidewave.sh` (download, safe-swap, wrapper `UPDATE_ON_START`, `fix-codex-acp`). Fora do pipeline automático — sem checagem de versão, sempre rebaixam o asset inteiro, ficam como subcomandos explícitos |
+| `schedule.rs` | Agendador nativo (systemd user timer / launchd / schtasks) pros mirrors, via `sysup schedule` |
+| `tui/` | Dashboard full-screen (ratatui + crossterm) quando stdout é terminal real e não `--dry-run` — spinner, progresso `(N/TOTAL)` lido da saída do pacman, resumo final em caixa. Fallback plain fora de terminal/CI/`NO_COLOR`/`--dry-run` |
 
 ## Release
 
-`git tag vX.Y.Z && git push --tags` → `.github/workflows/release.yml` roda GoReleaser (`.goreleaser.yaml`), builda linux/darwin × amd64/arm64 + windows/amd64 (`sysup-worker` é linux-only), publica GitHub Release com `checksums.txt`.
+`git tag vX.Y.Z && git push --tags` → `.github/workflows/release.yml` builda linux amd64/arm64 em `ubuntu-latest`, stampa `SYSUP_VERSION` via env no build, empacota `sysup_<os>_<arch>.tar.gz` + `sysup-worker_<os>_<arch>.tar.gz`, gera `checksums.txt` e publica GitHub Release com todos os artefatos.
 
-Rebuild manual (dev): `cd sysup && go build -o ~/.local/bin/sysup ./cmd/sysup`.
-Testar release local sem publicar: `go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean --skip=publish`.
+Rebuild manual (dev): `cd sysup && cargo build --release -p sysup && cp target/release/sysup ~/.local/bin/`.
+Build com versão embutida (simula release, sem publicar): `SYSUP_VERSION=v9.9.9 cargo build --release -p sysup`.
 
 ## Privilégio via polkit
 
 ### Problema original
 
-`sysup update` roda num dashboard full-screen (Bubble Tea); depois de assumir o terminal (alt-screen) não dá pra mostrar prompt de senha no meio do run. Mecanismo antigo (`sudo -v` + ticker 60s) quebra silenciosamente quando a credencial expira no meio (suspend, `timestamp_timeout` curto no PAM, 2FA).
+`sysup update` roda num dashboard full-screen (ratatui); depois de assumir o terminal (alt-screen) não dá pra mostrar prompt de senha no meio do run. Mecanismo antigo (`sudo -v` + ticker 60s) quebra silenciosamente quando a credencial expira no meio (suspend, `timestamp_timeout` curto no PAM, 2FA).
 
 Tentativa anterior (só existiu como `git stash`) gerava `/etc/sudoers.d/sysup` com `NOPASSWD` escopado. Descartada: regra `NOPASSWD` **permanente** no sistema é brecha grande demais pra um utilitário pessoal.
 
@@ -39,7 +41,7 @@ Tentativa anterior (só existiu como `git stash`) gerava `/etc/sudoers.d/sysup` 
 ```
 sysup update
   │
-  ├─ StartPrivilegedWorker() ──── pkexec /usr/lib/sysup/sysup-worker --socket <path>
+  ├─ WorkerClient::start() ──── pkexec /usr/lib/sysup/sysup-worker --socket <path>
   │                                  │
   │                          [ agente gráfico de polkit pede a senha — UMA vez ]
   │                                  │
@@ -49,7 +51,7 @@ sysup update
   ├─ pipeline (TUI ou plain) ──── passos privilegiados mandam pedido pro socket
   │                                em vez de re-autenticar
   │
-  └─ worker.Close() ──── fecha o pipe de stdin do worker → ele recebe EOF e encerra
+  └─ worker.close() ──── fecha o pipe de stdin do worker → ele recebe EOF e encerra
 ```
 
 | Ponto | Detalhe |

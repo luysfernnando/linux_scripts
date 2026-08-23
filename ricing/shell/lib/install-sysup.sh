@@ -37,17 +37,14 @@ install_sysup_from_release() {
 }
 
 install_sysup_from_source() {
-  if ! command -v go >/dev/null 2>&1; then
-    log_warn "sem release disponível e go não encontrado — 'sysup' não vai funcionar até instalar Go e rodar:"
-    log_dim "cd $REPO_DIR/sysup && go build -o ~/.local/bin/sysup ./cmd/sysup"
+  if ! command -v cargo >/dev/null 2>&1; then
+    log_warn "sem release disponível e cargo não encontrado — 'sysup' não vai funcionar até instalar Rust e rodar:"
+    log_dim "cd $REPO_DIR/sysup && cargo build --release -p sysup && cp target/release/sysup ~/.local/bin/"
     return 1
   fi
   log_dim "compilando sysup a partir do fonte..."
-  local tmpbin
-  tmpbin="$(mktemp)"
-  (cd "$REPO_DIR/sysup" && go build -o "$tmpbin" ./cmd/sysup)
-  command install -m 0755 "$tmpbin" "$HOME/.local/bin/sysup"
-  rm -f "$tmpbin"
+  (cd "$REPO_DIR/sysup" && cargo build --release -p sysup)
+  command install -m 0755 "$REPO_DIR/sysup/target/release/sysup" "$HOME/.local/bin/sysup"
   log_ok "sysup instalado (build local) em $HOME/.local/bin/sysup"
 }
 

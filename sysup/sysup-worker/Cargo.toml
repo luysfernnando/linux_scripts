@@ -1,0 +1,13 @@
+[package]
+name = "sysup-worker"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "sysup-worker"
+path = "src/main.rs"
+
+[dependencies]
+sysup-workerproto = { path = "../sysup-workerproto" }
+nix = { version = "0.29", features = ["user", "fs"] }
+anyhow = "1"

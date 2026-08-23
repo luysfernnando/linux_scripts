@@ -18,7 +18,7 @@ chmod +x <script>.sh && ./<script>.sh
 | `docker/postgres/docker-compose.yml` | Postgres local (2GB shared_buffers, NVMe) |
 | `install-menu.sh` | Menu interativo (`gum`) que instala os pedaços abaixo numa máquina nova |
 
-GitKraken/Tidewave: portados pro Go, ver `sysup gitkraken`/`sysup tidewave`.
+GitKraken/Tidewave: portados pro sysup (Rust), ver `sysup gitkraken`/`sysup tidewave`.
 
 **Convenções:** bash com `set -euo pipefail` + `need()` guard; Postgres compose usa volume nomeado `pgdata` (persiste no `docker compose down`).
 
@@ -44,9 +44,9 @@ KDE Plasma 6 + kitty + zsh/starship. `ricing/README.md` tem os comandos de resto
 
 `shell/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave dedicada `~/.ssh/id_luysfernnando_sign_commits`) — setup por máquina em `ricing/README.md`.
 
-`install-menu.sh` automatiza tudo acima (shell, kitty, tema KDE, fastfetch, starship, sysup); requer `gum`. `ricing/shell/install.sh` faz o setup de shell isolado + instala `sysup` (baixa release do GitHub, ou `go build` como fallback). Também garante binários usados pelos aliases dos 3 shells (`lsd`, `fzf` — via `pacman`/`apt`, `ricing/shell/lib/install-cli-tools.sh`); se shell detectado for zsh, garante oh-my-zsh, plugins (`zsh-autosuggestions`, `fast-syntax-highlighting`, `zsh-completions`, `fzf-tab`) e `starship` via `ricing/shell/lib/install-zsh-plugins.sh` — antes disso, detecta oh-my-posh/powerlevel10k instalados e pergunta se quer desinstalar (via `pacman`/`apt` se veio de pacote). Tudo idempotente, checa antes de instalar.
+`install-menu.sh` automatiza tudo acima (shell, kitty, tema KDE, fastfetch, starship, sysup); requer `gum`. `ricing/shell/install.sh` faz o setup de shell isolado + instala `sysup` (baixa release do GitHub, ou `cargo build` como fallback). Também garante binários usados pelos aliases dos 3 shells (`lsd`, `fzf` — via `pacman`/`apt`, `ricing/shell/lib/install-cli-tools.sh`); se shell detectado for zsh, garante oh-my-zsh, plugins (`zsh-autosuggestions`, `fast-syntax-highlighting`, `zsh-completions`, `fzf-tab`) e `starship` via `ricing/shell/lib/install-zsh-plugins.sh` — antes disso, detecta oh-my-posh/powerlevel10k instalados e pergunta se quer desinstalar (via `pacman`/`apt` se veio de pacote). Tudo idempotente, checa antes de instalar.
 
-## sysup — engine de update (Go, cross-distro)
+## sysup — engine de update (Rust, cross-distro)
 
 Binário único: `sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup [--dry-run]`. Standalone (não depende do repo clonado).
 
@@ -60,7 +60,7 @@ Binário único: `sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup 
 
 **Privilégio:** com `polkit-setup` rodado, `update` autoriza um único `pkexec sysup-worker` no início (antes da TUI); worker vive só durante o run, valida comandos por whitelist exata (sem `sh -c`). paru é redirecionado pro worker via `paru.conf`; yay não suporta isso e continua chamando `sudo` (2º prompt). Sem `polkit-setup`, cai pro `sudo -v` clássico. Detalhe/trade-offs completos em `sysup/README.md`.
 
-Layout por pacote (`internal/*`), release e detalhe completo do worker de privilégio: `sysup/README.md`.
+Layout por módulo (workspace Cargo: `sysup`/`sysup-worker`/`sysup-workerproto`), release e detalhe completo do worker de privilégio: `sysup/README.md`.
 
 ## Claude Skills & Rules
 

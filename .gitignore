@@ -4,6 +4,8 @@
 # Backups gerados pelo install.sh
 dotfiles/*.bak
 
-# Binário compilado do sysup (build local) e output do GoReleaser
-sysup/sysup
 dist/
+
+# Rust (sysup e demais crates do workspace)
+target/
+**/*.rs.bk

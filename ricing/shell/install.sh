@@ -146,7 +146,7 @@ else
 fi
 
 # ---------------------------
-# sysup (engine de update cross-distro/OS, em Go)
+# sysup (engine de update cross-distro/OS, em Rust)
 # ---------------------------
 # Lógica de instalação em ricing/shell/lib/install-sysup.sh (compartilhada
 # com install-menu.sh, que também precisa poder instalar o sysup sozinho).
