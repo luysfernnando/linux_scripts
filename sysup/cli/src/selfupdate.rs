@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, Context};
 use serde::Deserialize;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
@@ -203,14 +204,33 @@ fn do_update(release: &Release, latest: &semver::Version) -> anyhow::Result<()> 
 // Swaps the running binary's file for the freshly downloaded one.
 // std::fs::rename is used first since it's atomic and safe to do on an
 // executing file on Unix (the running process keeps its old inode open
-// until it re-execs); it falls back to copy+remove for the case where the
-// extracted temp file lives on a different filesystem than the target.
+// until it re-execs). It fails with EXDEV when the extracted temp file
+// (under std::env::temp_dir(), often tmpfs) lives on a different
+// filesystem than target — copying straight onto target as a fallback
+// would hit ETXTBSY instead (Linux refuses to open+truncate a binary
+// that's currently executing), so the fallback copies into a sibling
+// temp file in target's own directory (same filesystem, so it never
+// touches target's live inode) and renames that onto target instead.
 fn replace_binary(new_path: &Path, target: &Path) -> anyhow::Result<()> {
     if std::fs::rename(new_path, target).is_ok() {
         return Ok(());
     }
-    std::fs::copy(new_path, target)
-        .with_context(|| format!("copiando binário atualizado para {}", target.display()))?;
+
+    let target_dir = target
+        .parent()
+        .ok_or_else(|| anyhow!("{} não tem diretório pai", target.display()))?;
+    let target_name = target
+        .file_name()
+        .ok_or_else(|| anyhow!("{} não tem nome de arquivo", target.display()))?
+        .to_string_lossy();
+    let staged = target_dir.join(format!(".{target_name}.new"));
+
+    std::fs::copy(new_path, &staged)
+        .with_context(|| format!("copiando binário atualizado para {}", staged.display()))?;
+    std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755))
+        .with_context(|| format!("ajustando permissão de {}", staged.display()))?;
+    std::fs::rename(&staged, target)
+        .with_context(|| format!("substituindo {} pelo binário atualizado", target.display()))?;
     let _ = std::fs::remove_file(new_path);
     Ok(())
 }
