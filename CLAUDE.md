@@ -35,14 +35,14 @@ KDE Plasma 6 + kitty + zsh/starship. `ricing/README.md` tem os comandos de resto
 | KDE estilo de app | Kvantum-Dark (engine Kvantum, tema `KvMojave`) | — (`~/.config/Kvantum/kvantum.kvconfig`) | Não |
 | kitty | tema "Idle Toes", fundo transparente 0.8 | `ricing/terminal/kitty/` | Sim |
 | shell | zsh/bash/fish, mesmos aliases | `ricing/shell/{zsh,bash,fish}/` | Sim (zsh/bash); fish é `source`ado |
-| prompt | Starship, preset `gruvbox-rainbow` | `ricing/shell/zsh/tema/` | Sim (`~/.config/starship.toml`) |
+| prompt | Starship, preset `gruvbox-rainbow` (zsh+bash+fish, tema não exclusivo de shell) | `ricing/shell/starship/linux.toml` | Sim (`~/.config/starship.toml`) |
 | fastfetch | logo `images/165.png`, presets de terceiros | `ricing/fastfetch/` (`config.jsonc.tmpl`, `images/`, `presets/`) | `images/`/`presets/` sim; `config.jsonc` não — gerado do `.tmpl` (placeholder `@LOGO_TYPE@` → `sixel` se WSL, `kitty` se nativo; ver `install-menu.sh`) |
 | GRUB | boot silencioso (sem menu/mensagens) | `ricing/grub/silent-boot.sh` | Não, script `sudo` |
-| git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/.gitconfig` | Sim |
+| git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/git/.gitconfig` | Sim |
 | WezTerm (Windows) | Catppuccin Mocha, WebGpu, tab bar embaixo | `ricing/terminal/wezterm/wezterm.lua` | Não, copiado |
-| PowerShell/Starship (Windows) | prompt Starship + `Terminal-Icons` | `ricing/shell/powershell/` | Não, copiado |
+| PowerShell/Starship (Windows) | prompt Starship + `Terminal-Icons` | `ricing/shell/powershell/` (profile) + `ricing/shell/starship/windows.toml` (tema minimalista, drive de rede) | Não, copiado |
 
-`shell/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave dedicada `~/.ssh/id_luysfernnando_sign_commits`) — setup por máquina em `ricing/README.md`.
+`shell/git/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave `~/.ssh/luysfernnando_sign_commits` — path fixo em toda máquina, keypair distinto por máquina). `allowed_signers` versionado (`shell/git/allowed_signers`, symlink igual) acumula a pubkey de cada máquina — setup em `ricing/README.md`.
 
 `install-menu.sh` automatiza tudo acima (shell, kitty, tema KDE, fastfetch, starship, sysup); requer `gum`. `ricing/shell/install.sh` faz o setup de shell isolado + instala `sysup` (baixa release do GitHub, ou `cargo build` como fallback). Também garante binários usados pelos aliases dos 3 shells (`lsd`, `fzf` — via `pacman`/`apt`, `ricing/shell/lib/install-cli-tools.sh`); se shell detectado for zsh, garante oh-my-zsh, plugins (`zsh-autosuggestions`, `fast-syntax-highlighting`, `zsh-completions`, `fzf-tab`) e `starship` via `ricing/shell/lib/install-zsh-plugins.sh` — antes disso, detecta oh-my-posh/powerlevel10k instalados e pergunta se quer desinstalar (via `pacman`/`apt` se veio de pacote). Tudo idempotente, checa antes de instalar.
 

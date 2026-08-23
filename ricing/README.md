@@ -76,12 +76,12 @@ Copy-Item ricing\terminal\wezterm\wezterm.lua "$HOME\.wezterm.lua"
 
 ## Shell (PowerShell + Starship, Windows)
 
-Config em `shell/powershell/`. Prompt via Starship (não oh-my-posh — testado, ~900ms mais lento no boot pelo módulo de 55KB que oh-my-posh gera; Starship é ~10KB). `starship.toml` desliga módulos de versão de linguagem (php/node/python/etc) — cada um spawna processo verificando `composer.json`/`package.json` por pasta, lento em drive de rede. `Terminal-Icons` (módulo PowerShell Gallery) dá ícones no `ls`/`Get-ChildItem`.
+Config em `shell/powershell/`. Prompt via Starship (não oh-my-posh — testado, ~900ms mais lento no boot pelo módulo de 55KB que oh-my-posh gera; Starship é ~10KB). Tema em `shell/starship/windows.toml` desliga módulos de versão de linguagem (php/node/python/etc) — cada um spawna processo verificando `composer.json`/`package.json` por pasta, lento em drive de rede. `Terminal-Icons` (módulo PowerShell Gallery) dá ícones no `ls`/`Get-ChildItem`.
 
 Restaurar:
 
 ```powershell
-Copy-Item ricing\shell\powershell\starship.toml "$HOME\.config\starship.toml"
+Copy-Item ricing\shell\starship\windows.toml "$HOME\.config\starship.toml"
 Copy-Item ricing\shell\powershell\Microsoft.PowerShell_profile.ps1 "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 winget install Starship.Starship
 Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser
@@ -106,37 +106,39 @@ Ou simplesmente `./install-menu.sh` → "fastfetch (config gerado + symlink)", q
 
 ## Prompt (Starship)
 
-Tema em `shell/zsh/tema/` (mora dentro `shell/zsh/` — específico prompt zsh, não item solto). Preset oficial `gruvbox-rainbow` (`starship preset gruvbox-rainbow -o starship.toml`) — segmentos powerline com fundo colorido, ícone de OS/usuário, git, versões de linguagem, hora. Visual diferente do `starship.toml` do PowerShell/Windows (esse é minimalista, módulos de linguagem desligados por causa do drive de rede — ver seção acima). `.zshrc` carrega via starship:
+Tema em `shell/starship/linux.toml` — pasta própria porque o prompt não é exclusivo de um shell (zsh, bash e fish todos carregam o mesmo tema; só o `windows.toml`, usado pelo PowerShell, é diferente — minimalista, módulos de linguagem desligados por causa do drive de rede, ver seção acima). Preset oficial `gruvbox-rainbow` (`starship preset gruvbox-rainbow -o starship.toml`) — segmentos powerline com fundo colorido, ícone de OS/usuário, git, versões de linguagem, hora. `.zshrc`/`config.fish` carregam via starship:
 
 ```bash
-eval "$(starship init zsh)"
+eval "$(starship init zsh)"   # .zshrc
+starship init fish | source   # config.fish
 ```
 
 Restaurar (symlink, não copiar — repo fica fonte da verdade):
 
 ```bash
 mkdir -p ~/.config
-ln -s "$(pwd)/ricing/shell/zsh/tema/starship.toml" ~/.config/starship.toml
+ln -s "$(pwd)/ricing/shell/starship/linux.toml" ~/.config/starship.toml
 ```
 
-Se a máquina tiver oh-my-posh ou powerlevel10k instalado de antes, `ricing/shell/install.sh` (ou `install-menu.sh` → "starship (symlink tema)") detecta e pergunta antes de desinstalar (via `pacman`/`apt` se veio de pacote, ou removendo o binário/pasta se foi instalação manual).
+Se a máquina tiver oh-my-posh ou powerlevel10k instalado de antes, `ricing/shell/install.sh` (ou `install-menu.sh` → "starship (symlink tema)") detecta e pergunta antes de desinstalar (via `pacman`/`apt` se veio de pacote, ou removendo o binário/pasta se foi instalação manual). Esse passo hoje só roda quando o shell detectado é zsh — fish ganha o `starship init fish` no `config.fish` mas depende do symlink já ter sido feito numa passada zsh, ou de rodar o `ln -s` manual acima.
 
 zsh também usa oh-my-zsh (`~/.oh-my-zsh`) — ver `plugins=(...)` e `ZSH_THEME` em `shell/zsh/.zshrc` (já versionado neste repo).
 
 ## Shell
 
-`.zshrc`, `.bashrc`, `config.fish` — cada um sua subpasta (`shell/zsh/`, `shell/bash/`, `shell/fish/`), mesmos aliases nos três. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
+`.zshrc`, `.bashrc`, `config.fish` — cada um sua subpasta (`shell/zsh/`, `shell/bash/`, `shell/fish/`), mesmos aliases nos três. Tema do prompt fica fora dessas pastas, em `shell/starship/` (ver seção acima), por não ser exclusivo de nenhuma. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
 
 ## Assinatura de commits (SSH)
 
-`shell/.gitconfig` usa `gpg.format = ssh` — commits assinados com chave SSH dedicada, não a de autenticação. Setup por máquina nova:
+`shell/git/.gitconfig` usa `gpg.format = ssh` — commits assinados com chave SSH dedicada, não a de autenticação. `signingKey` aponta pro mesmo path (`~/.ssh/luysfernnando_sign_commits.pub`) em toda máquina — só o *conteúdo* do keypair muda por máquina, o path fica fixo no `.gitconfig` compartilhado, sem override local. Setup por máquina nova via `install-menu.sh` → "Git (assinatura SSH + ssh-agent)" (ou manual, ver `ricing/shell/lib/install-git-ssh.sh`):
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/id_luysfernnando_sign_commits -C "email signing"
-echo "luysfernnando@gmail.com $(cat ~/.ssh/id_luysfernnando_sign_commits.pub)" > ~/.ssh/allowed_signers
+ssh-keygen -t ed25519 -f ~/.ssh/luysfernnando_sign_commits -C "$(git config --global user.email)"
 ```
 
-Depois cadastra a pubkey nova no GitHub (github.com/settings/keys → "New SSH key" → tipo **Signing Key**, não Authentication). `allowed_signers` é só pra `git log --show-signature` validar localmente — GitHub verifica sozinho pelas chaves cadastradas na conta.
+Depois cadastra a pubkey nova no GitHub (github.com/settings/keys → "New SSH key" → tipo **Signing Key**, não Authentication).
+
+`allowed_signers` é versionado em `shell/git/allowed_signers` e symlinkado pra `~/.ssh/allowed_signers` (mesmo padrão do `.gitconfig`) — cada máquina *acrescenta* sua pubkey nesse arquivo (nunca sobrescreve) e dá commit+push, assim qualquer máquina roda `git log --show-signature` e reconhece commit assinado em qualquer outra. Serve só pra validação local — GitHub verifica sozinho pelas chaves cadastradas na conta.
 
 ## GRUB silencioso
 
