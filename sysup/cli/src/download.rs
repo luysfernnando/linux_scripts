@@ -128,3 +128,96 @@ fn open_with_mode(path: &Path, mode: u32) -> anyhow::Result<File> {
         .open(path)?;
     Ok(f)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn build_tar_gz(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut builder = tar::Builder::new(Vec::new());
+        for (name, content) in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(content.len() as u64);
+            header.set_mode(0o755);
+            header.set_cksum();
+            builder.append_data(&mut header, name, *content).unwrap();
+        }
+        let tar_bytes = builder.into_inner().unwrap();
+
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(&tar_bytes).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    fn sha256_hex(data: &[u8]) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(data);
+        hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    }
+
+    #[test]
+    fn verify_checksum_accepts_matching_hash() {
+        let data = b"hello world";
+        let hash = sha256_hex(data);
+        let checksums = format!("{hash}  sysup_linux_amd64.tar.gz\n");
+        assert!(verify_checksum(&checksums, "sysup_linux_amd64.tar.gz", data).is_ok());
+    }
+
+    #[test]
+    fn verify_checksum_rejects_mismatched_hash() {
+        let checksums = format!("{}  sysup_linux_amd64.tar.gz\n", "0".repeat(64));
+        let result = verify_checksum(&checksums, "sysup_linux_amd64.tar.gz", b"hello world");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_checksum_rejects_missing_entry() {
+        let checksums = format!("{}  sysup_darwin_amd64.tar.gz\n", "0".repeat(64));
+        let result = verify_checksum(&checksums, "sysup_linux_amd64.tar.gz", b"hello world");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn extract_single_file_finds_named_entry_and_sets_mode() {
+        let tgz = build_tar_gz(&[
+            ("checksums.txt", b"irrelevant"),
+            ("sysup", b"fake binary content"),
+        ]);
+
+        let out = extract_single_file(&tgz, "sysup").expect("should extract sysup entry");
+        let content = std::fs::read(&out).expect("read extracted file");
+        assert_eq!(content, b"fake binary content");
+
+        let mode = std::fs::metadata(&out).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o755);
+
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn extract_single_file_errors_when_name_absent() {
+        let tgz = build_tar_gz(&[("checksums.txt", b"irrelevant")]);
+        let result = extract_single_file(&tgz, "sysup");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn extract_tar_gz_writes_files_with_header_mode() {
+        let tgz_bytes = build_tar_gz(&[("bin/sysup-worker", b"worker content")]);
+        let archive_dir = tempfile::tempdir().expect("tempdir for archive file");
+        let archive_path = archive_dir.path().join("archive.tar.gz");
+        std::fs::write(&archive_path, &tgz_bytes).expect("write archive to disk");
+
+        let dest_dir = tempfile::tempdir().expect("tempdir for extraction output");
+        extract_tar_gz(&archive_path, dest_dir.path()).expect("extract archive");
+
+        let extracted = dest_dir.path().join("bin/sysup-worker");
+        let content = std::fs::read(&extracted).expect("read extracted file");
+        assert_eq!(content, b"worker content");
+    }
+}

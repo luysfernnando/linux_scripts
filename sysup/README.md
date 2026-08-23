@@ -21,6 +21,33 @@ Workspace Cargo com 3 crates: `cli` (pacote `sysup`, binário `sysup`), `worker`
 | `schedule.rs` | Agendador nativo (systemd user timer / launchd / schtasks) pros mirrors, via `sysup schedule` |
 | `tui/` | Dashboard full-screen (ratatui + crossterm) quando stdout é terminal real e não `--dry-run` — spinner, progresso `(N/TOTAL)` lido da saída do pacman, resumo final em caixa. Fallback plain fora de terminal/CI/`NO_COLOR`/`--dry-run` |
 
+## Testes
+
+`./sysup/check.sh` — gate único antes de todo commit que toca `sysup/`:
+`cargo fmt --check` → `cargo clippy --workspace --all-targets -- -D
+warnings` → `cargo test --workspace`. Sucesso imprime só um `✔` por etapa;
+falha despeja o log completo só daquela etapa e para.
+
+Cobertura:
+
+- Unitários (`#[cfg(test)]` inline em `download.rs`/`selfupdate.rs`):
+  `verify_checksum`, extração de tar.gz, mapeamento os/arch, e a regressão
+  do bug do ETXTBSY (substituir um binário que está rodando naquele exato
+  momento) — determinístico, sem depender do layout de filesystem do host.
+- Integração (`cli/tests/`): `cli_smoke.rs` cobre `version` e `update
+  --dry-run` sem tocar rede nem sistema; `selfupdate_e2e.rs` roda o
+  self-update de ponta a ponta (fetch → download → checksum → extract →
+  replace → re-exec) contra um mock HTTP local da API do GitHub — nunca
+  contra a rede real.
+
+`selfupdate_e2e.rs` exige `SYSUP_VERSION` setado na hora de compilar os
+testes (`check.sh` já faz isso) — sem isso `VERSION` vira `"dev"` e o teste
+pula com aviso em vez de falhar.
+
+`update --self-update-only` (usado pelo teste e-2-e) só roda o self-update
+e sai, sem tocar no pipeline real de sistema — evita qualquer risco de um
+teste disparar pacman/apt/yay/npm/sudo de verdade.
+
 ## Release
 
 `git tag vX.Y.Z && git push --tags` → `.github/workflows/release.yml` builda linux amd64/arm64 em `ubuntu-latest`, stampa `SYSUP_VERSION` via env no build, empacota `sysup_<os>_<arch>.tar.gz` + `sysup-worker_<os>_<arch>.tar.gz`, gera `checksums.txt` e publica GitHub Release com todos os artefatos.

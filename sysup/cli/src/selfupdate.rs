@@ -62,7 +62,12 @@ fn fetch_latest_release() -> anyhow::Result<Release> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("sysup-selfupdate")
         .build()?;
-    let url = format!("https://api.github.com/repos/{REPO_SLUG}/releases/latest");
+    // SYSUP_SELFUPDATE_API_BASE is a test-only override (points at a local
+    // mock server in sysup/cli/tests/selfupdate_e2e.rs) — not documented
+    // for end users, who always hit the real GitHub API.
+    let api_base = std::env::var("SYSUP_SELFUPDATE_API_BASE")
+        .unwrap_or_else(|_| "https://api.github.com".to_string());
+    let url = format!("{api_base}/repos/{REPO_SLUG}/releases/latest");
     let resp = client.get(url).send()?;
     if !resp.status().is_success() {
         return Err(anyhow!("GitHub releases/latest: status {}", resp.status()));
@@ -215,7 +220,13 @@ fn replace_binary(new_path: &Path, target: &Path) -> anyhow::Result<()> {
     if std::fs::rename(new_path, target).is_ok() {
         return Ok(());
     }
+    replace_via_copy(new_path, target)
+}
 
+// Split out from replace_binary so the ETXTBSY regression test can exercise
+// exactly this path directly, without depending on the host's filesystem
+// layout to force rename() into its EXDEV fallback.
+fn replace_via_copy(new_path: &Path, target: &Path) -> anyhow::Result<()> {
     let target_dir = target
         .parent()
         .ok_or_else(|| anyhow!("{} não tem diretório pai", target.display()))?;
@@ -291,4 +302,87 @@ pub fn re_exec(self_path: &Path) -> anyhow::Result<()> {
     let err = Command::new(self_path).args(args).exec();
     // exec() only returns on failure — a successful call never comes back.
     Err(anyhow::Error::from(err))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Stdio;
+
+    #[test]
+    fn target_os_maps_macos_to_darwin() {
+        // Can't flip std::env::consts::OS at test time, so this just pins
+        // the mapping table itself rather than the live host value.
+        assert_eq!(
+            match "macos" {
+                "macos" => "darwin",
+                other => other,
+            },
+            "darwin"
+        );
+        assert_eq!(
+            match "linux" {
+                "macos" => "darwin",
+                other => other,
+            },
+            "linux"
+        );
+    }
+
+    #[test]
+    fn target_arch_maps_go_style_names() {
+        assert_eq!(
+            match "x86_64" {
+                "x86_64" => "amd64",
+                "aarch64" => "arm64",
+                other => other,
+            },
+            "amd64"
+        );
+        assert_eq!(
+            match "aarch64" {
+                "x86_64" => "amd64",
+                "aarch64" => "arm64",
+                other => other,
+            },
+            "arm64"
+        );
+    }
+
+    // Regression test for the ETXTBSY bug: replace_via_copy used to
+    // std::fs::copy() straight onto `target`, which fails with ETXTBSY when
+    // `target` is a binary that's currently executing (Linux refuses to
+    // open+truncate a live text segment). Reproduces that exact condition —
+    // a real child process holding `target` open and running — rather than
+    // relying on the host's mount layout to force rename()'s EXDEV fallback,
+    // which is why this calls replace_via_copy directly instead of going
+    // through replace_binary.
+    #[test]
+    fn replace_via_copy_survives_target_currently_executing() {
+        let live_dir = tempfile::tempdir().expect("tempdir for live target");
+        let target = live_dir.path().join("live-exe");
+        std::fs::copy("/bin/sleep", &target).expect("copy /bin/sleep as fixture");
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))
+            .expect("chmod fixture executable");
+
+        let mut child = Command::new(&target)
+            .arg("2")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn live exe to hold target open");
+
+        let new_dir = tempfile::tempdir().expect("tempdir for replacement content");
+        let new_path = new_dir.path().join("new-binary");
+        let new_content = b"#!/bin/sh\necho replaced\n";
+        std::fs::write(&new_path, new_content).expect("write replacement content");
+
+        let result = replace_via_copy(&new_path, &target);
+        assert!(result.is_ok(), "replace_via_copy failed: {result:?}");
+
+        let replaced = std::fs::read(&target).expect("read replaced target");
+        assert_eq!(replaced, new_content);
+
+        let _ = child.wait();
+    }
 }

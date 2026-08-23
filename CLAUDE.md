@@ -4,7 +4,7 @@ Guidance for Claude Code neste repo.
 
 ## Purpose
 
-Scripts Linux pessoais (Arch/Debian) — setup de ambiente e ricing. Standalone, sem build/test suite.
+Scripts Linux pessoais (Arch/Debian) — setup de ambiente e ricing. Standalone, sem build/test suite (exceto `sysup/`, ver seção própria).
 
 ```bash
 chmod +x <script>.sh && ./<script>.sh
@@ -61,6 +61,8 @@ Binário único: `sysup update|mirrors|schedule|gitkraken|tidewave|polkit-setup 
 **Privilégio:** com `polkit-setup` rodado, `update` autoriza um único `pkexec sysup-worker` no início (antes da TUI); worker vive só durante o run, valida comandos por whitelist exata (sem `sh -c`). paru é redirecionado pro worker via `paru.conf`; yay não suporta isso e continua chamando `sudo` (2º prompt). Sem `polkit-setup`, cai pro `sudo -v` clássico. Detalhe/trade-offs completos em `sysup/README.md`.
 
 Layout por módulo (workspace Cargo: `sysup/cli`/`sysup/worker`/`sysup/ipc`), release e detalhe completo do worker de privilégio: `sysup/README.md`.
+
+**Testes:** `./sysup/check.sh` antes de commit em `sysup/` (fmt+clippy+test, silencioso no sucesso; self-update testado contra mock HTTP local, nunca rede real). Detalhe: `sysup/README.md`.
 
 ## Claude Skills & Rules
 

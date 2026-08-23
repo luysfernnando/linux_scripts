@@ -35,6 +35,10 @@ enum Command {
         dry_run: bool,
         #[arg(long)]
         no_self_update: bool,
+        /// Só verifica/aplica o self-update do sysup e sai, sem rodar o
+        /// pipeline de sistema (pacman/apt/yay/npm/...)
+        #[arg(long)]
+        self_update_only: bool,
     },
     /// Reranqueia mirrors do gerenciador de pacotes
     Mirrors {
@@ -88,7 +92,8 @@ pub fn run() -> anyhow::Result<()> {
         Command::Update {
             dry_run,
             no_self_update,
-        } => run_update(dry_run, no_self_update),
+            self_update_only,
+        } => run_update(dry_run, no_self_update, self_update_only),
         Command::Mirrors { dry_run } => {
             let family = detect::detect_family();
             let t = detect::detect_tools();
@@ -206,7 +211,7 @@ fn round_secs(d: Duration) -> Duration {
     Duration::from_secs(d.as_secs_f64().round() as u64)
 }
 
-fn run_update(dry_run: bool, no_self_update: bool) -> anyhow::Result<()> {
+fn run_update(dry_run: bool, no_self_update: bool, self_update_only: bool) -> anyhow::Result<()> {
     // Captured before self_update runs: once it replaces the binary on
     // disk, re-resolving our own exe path would hit the Linux "(deleted)"
     // quirk on self-rename (see selfupdate::re_exec's doc comment).
@@ -228,6 +233,9 @@ fn run_update(dry_run: bool, no_self_update: bool) -> anyhow::Result<()> {
                 ))
             );
         }
+    }
+    if self_update_only {
+        return Ok(());
     }
     // Best-effort: a stale/dirty dotfiles clone, or no clone at all, should
     // never block the actual system update.
