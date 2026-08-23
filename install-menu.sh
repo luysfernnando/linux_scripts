@@ -146,6 +146,11 @@ action_sysup() {
   install_sysup
 }
 
+action_claude() {
+  log_step "Claude Code (skills/rules/RTK.md/settings.json/filtros rtk)"
+  bash "$REPO_DIR/claude/install.sh"
+}
+
 gum style --bold --foreground 212 --border rounded --padding "0 2" --margin "1 0" \
   "install-menu.sh — setup de ambiente"
 
@@ -158,7 +163,8 @@ choice="$(gum choose \
   "fastfetch (config gerado + symlink)" \
   "starship (symlink tema)" \
   "Git (assinatura SSH + ssh-agent)" \
-  "sysup (primeira instalação)")"
+  "sysup (primeira instalação)" \
+  "Claude Code (skills/rules/configs)")"
 
 if [[ -z "$choice" ]]; then
   log_dim "nada selecionado, saindo."
@@ -179,6 +185,7 @@ case "$choice" in
   "starship (symlink tema)") action_starship ;;
   "Git (assinatura SSH + ssh-agent)") action_git ;;
   "sysup (primeira instalação)") action_sysup ;;
+  "Claude Code (skills/rules/configs)") action_claude ;;
 esac
 
 echo

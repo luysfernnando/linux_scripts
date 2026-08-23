@@ -79,3 +79,13 @@ link_file "$CLAUDE_DIR/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 link_file "$CLAUDE_DIR/RTK.md" "$HOME/.claude/RTK.md"
 link_file "$CLAUDE_DIR/settings.json" "$HOME/.claude/settings.json"
 log_ok "CLAUDE.md + RTK.md + settings.json"
+
+log_step "Symlinkando filtros do rtk"
+mkdir -p "$HOME/.config/rtk"
+link_file "$CLAUDE_DIR/rtk-filters.toml" "$HOME/.config/rtk/filters.toml"
+log_ok "rtk-filters.toml"
+if command -v rtk >/dev/null 2>&1; then
+  rtk trust --yes >/dev/null 2>&1 && log_ok "rtk trust --yes" || log_warn "rode 'rtk trust --yes' manualmente pra ativar os filtros custom"
+else
+  log_dim "rtk não instalado — depois de instalar, rode 'rtk trust --yes' pra ativar os filtros custom"
+fi

@@ -1,0 +1,50 @@
+# User-global RTK filters — symlinked to ~/.config/rtk/filters.toml via claude/install.sh.
+# Project-local .rtk/filters.toml takes precedence over these.
+# Docs: https://github.com/rtk-ai/rtk#custom-filters
+schema_version = 1
+
+[filters.pacman]
+description = "Compact pacman output (strip DB sync noise/progress bars)"
+match_command = "^(sudo\\s+)?pacman\\b"
+strip_ansi = true
+strip_lines_matching = ["^:: Synchronizing package databases", "^\\s*$"]
+max_lines = 40
+on_empty = "pacman: ok"
+
+[filters.pkill]
+description = "Compact pkill output"
+match_command = "^pkill\\b"
+strip_ansi = true
+on_empty = "pkill: no matching process"
+
+[filters.pgrep]
+description = "Compact pgrep output (cap long PID lists)"
+match_command = "^pgrep\\b"
+strip_ansi = true
+max_lines = 20
+on_empty = "pgrep: no matches"
+
+[filters.systemctl-user-status]
+description = "Compact systemctl status output (covers --user/--system, builtin only matches bare 'systemctl status')"
+match_command = "^systemctl\\s+(--user\\s+|--system\\s+)?status\\b"
+strip_ansi = true
+max_lines = 20
+
+[filters.fastfetch]
+description = "Compact fastfetch output (strip ANSI, cap length — logo+info block is decorative, not needed in full)"
+match_command = "^fastfetch\\b"
+strip_ansi = true
+max_lines = 30
+on_empty = "fastfetch: ok"
+
+[filters.starship]
+description = "Compact starship prompt output (single ANSI-heavy line)"
+match_command = "^starship\\s+prompt\\b"
+strip_ansi = true
+max_lines = 5
+
+[filters.oh-my-posh]
+description = "Compact oh-my-posh output (legacy, still hit by install-menu detection)"
+match_command = "^oh-my-posh\\s+print\\b"
+strip_ansi = true
+max_lines = 5
