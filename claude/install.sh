@@ -2,6 +2,21 @@
 set -euo pipefail
 
 CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../ricing/shell/lib/log.sh
+source "$CLAUDE_DIR/../ricing/shell/lib/log.sh"
+
+if ! command -v rsync >/dev/null 2>&1; then
+  log_warn "faltando: rsync"
+  if command -v pacman >/dev/null 2>&1; then
+    log_dim "instale com: sudo pacman -S rsync"
+  elif command -v apt >/dev/null 2>&1; then
+    log_dim "instale com: sudo apt install rsync"
+  else
+    log_dim "instale o pacote 'rsync' pelo gerenciador da sua distro."
+  fi
+  exit 1
+fi
+
 SKILLS_SRC_DIR="$CLAUDE_DIR/skills"
 RULES_SRC_DIR="$CLAUDE_DIR/rules"
 AGENTS_SKILLS_DIR="$HOME/.agents/skills"
@@ -20,28 +35,47 @@ link_skill_into_agent() {
   mkdir -p "$agent_dir"
 
   if [[ -e "$dst" && ! -L "$dst" ]]; then
-    echo "Backup: $dst -> $dst.bak"
+    log_warn "backup: $dst -> $dst.bak"
     mv "$dst" "$dst.bak"
   fi
 
   ln -sfn "$src" "$dst"
-  echo "Linked: $dst -> $src"
+  log_dim "$dst -> $src"
+}
+
+link_file() {
+  local src="$1" dst="$2"
+
+  if [[ -e "$dst" && ! -L "$dst" ]]; then
+    log_warn "backup: $dst -> $dst.bak"
+    mv "$dst" "$dst.bak"
+  fi
+
+  ln -sfn "$src" "$dst"
+  log_dim "$dst -> $src"
 }
 
 mkdir -p "$AGENTS_SKILLS_DIR"
 
+log_step "Sincronizando skills"
 for skill_path in "$SKILLS_SRC_DIR"/*/; do
   name="$(basename "$skill_path")"
 
   rsync -a --delete "$skill_path" "$AGENTS_SKILLS_DIR/$name/"
-  echo "Copiado: $name -> $AGENTS_SKILLS_DIR/$name"
 
   for agent_dir in "${AGENT_SKILL_DIRS[@]}"; do
     link_skill_into_agent "$name" "$agent_dir"
   done
+
+  log_ok "$name"
 done
 
+log_step "Sincronizando rules"
 rsync -a --delete "$RULES_SRC_DIR/" "$CLAUDE_RULES_DIR/"
-echo "Sincronizado: rules -> $CLAUDE_RULES_DIR"
+log_ok "rules -> $CLAUDE_RULES_DIR"
 
-echo "Done. Skills instaladas: $(ls -1 "$SKILLS_SRC_DIR")"
+log_step "Symlinkando CLAUDE.md e RTK.md"
+link_file "$CLAUDE_DIR/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+link_file "$CLAUDE_DIR/RTK.md" "$HOME/.claude/RTK.md"
+link_file "$CLAUDE_DIR/settings.json" "$HOME/.claude/settings.json"
+log_ok "CLAUDE.md + RTK.md + settings.json"
