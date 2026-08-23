@@ -89,31 +89,37 @@ Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser
 
 ## fastfetch
 
-Config em `fastfetch/config.jsonc`. Logo `images/165.png` (kitty graphics protocol), módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
+Config em `fastfetch/config.jsonc.tmpl`. Logo `images/165.png`, módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
 
-Restaurar (symlink):
-
-```bash
-mkdir -p ~/.config/fastfetch
-ln -s "$(pwd)/ricing/fastfetch/config.jsonc" ~/.config/fastfetch/config.jsonc
-ln -s "$(pwd)/ricing/fastfetch/images" ~/.config/fastfetch/images
-ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
-```
-
-## Prompt (oh-my-posh)
-
-Tema em `shell/zsh/tema/` (mora dentro `shell/zsh/` — específico prompt zsh, não item solto). `.zshrc` carrega via oh-my-posh:
-
-```bash
-eval "$(oh-my-posh init zsh --config ~/.poshthemes/p10k.omp.json)"
-```
+Protocolo de imagem do logo (`logo.type`) varia por terminal — kitty/WezTerm usam `kitty`, Windows Terminal (WSL) usa `sixel` (precisa de `imagemagick` instalado pra decodificar; `fastfetch --show-errors` mostra o erro real se a imagem não aparecer). Por isso `config.jsonc` **não é symlink**: `config.jsonc.tmpl` fica no repo com o placeholder `@LOGO_TYPE@`, e `install-menu.sh` (ação "fastfetch") gera o arquivo real em `~/.config/fastfetch/config.jsonc` substituindo pelo valor certo pra cada máquina — symlinkar geraria diff de git toda vez que WSL e nativo divergissem.
 
 Restaurar:
 
 ```bash
-mkdir -p ~/.poshthemes
-cp ricing/shell/zsh/tema/p10k.omp.json ~/.poshthemes/
+mkdir -p ~/.config/fastfetch
+sed "s/@LOGO_TYPE@/kitty/" ricing/fastfetch/config.jsonc.tmpl > ~/.config/fastfetch/config.jsonc  # ou "sixel" no WSL
+ln -s "$(pwd)/ricing/fastfetch/images" ~/.config/fastfetch/images
+ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
 ```
+
+Ou simplesmente `./install-menu.sh` → "fastfetch (config gerado + symlink)", que já detecta WSL sozinho.
+
+## Prompt (Starship)
+
+Tema em `shell/zsh/tema/` (mora dentro `shell/zsh/` — específico prompt zsh, não item solto). Preset oficial `gruvbox-rainbow` (`starship preset gruvbox-rainbow -o starship.toml`) — segmentos powerline com fundo colorido, ícone de OS/usuário, git, versões de linguagem, hora. Visual diferente do `starship.toml` do PowerShell/Windows (esse é minimalista, módulos de linguagem desligados por causa do drive de rede — ver seção acima). `.zshrc` carrega via starship:
+
+```bash
+eval "$(starship init zsh)"
+```
+
+Restaurar (symlink, não copiar — repo fica fonte da verdade):
+
+```bash
+mkdir -p ~/.config
+ln -s "$(pwd)/ricing/shell/zsh/tema/starship.toml" ~/.config/starship.toml
+```
+
+Se a máquina tiver oh-my-posh ou powerlevel10k instalado de antes, `ricing/shell/install.sh` (ou `install-menu.sh` → "starship (symlink tema)") detecta e pergunta antes de desinstalar (via `pacman`/`apt` se veio de pacote, ou removendo o binário/pasta se foi instalação manual).
 
 zsh também usa oh-my-zsh (`~/.oh-my-zsh`) — ver `plugins=(...)` e `ZSH_THEME` em `shell/zsh/.zshrc` (já versionado neste repo).
 

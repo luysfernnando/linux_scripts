@@ -23,9 +23,9 @@ install_sysup_from_release() {
   url="https://github.com/$SYSUP_REPO_SLUG/releases/latest/download/$asset"
   tmpdir="$(mktemp -d)"
 
-  echo "Baixando $url..."
+  log_dim "baixando release do sysup..."
   if ! curl -fsSL "$url" -o "$tmpdir/$asset"; then
-    echo "Sem release disponível ainda (ou download falhou)."
+    log_warn "sem release disponível ainda (ou download falhou)."
     rm -rf "$tmpdir"
     return 1
   fi
@@ -33,22 +33,22 @@ install_sysup_from_release() {
   tar -xzf "$tmpdir/$asset" -C "$tmpdir" sysup
   command install -m 0755 "$tmpdir/sysup" "$HOME/.local/bin/sysup"
   rm -rf "$tmpdir"
-  echo "sysup instalado (release) em $HOME/.local/bin/sysup"
+  log_ok "sysup instalado (release) em $HOME/.local/bin/sysup"
 }
 
 install_sysup_from_source() {
   if ! command -v go >/dev/null 2>&1; then
-    echo "AVISO: sem release disponível e go não encontrado — 'update'/'sysup' não vai funcionar até instalar Go e rodar:"
-    echo "  cd $REPO_DIR/sysup && go build -o ~/.local/bin/sysup ./cmd/sysup"
+    log_warn "sem release disponível e go não encontrado — 'sysup' não vai funcionar até instalar Go e rodar:"
+    log_dim "cd $REPO_DIR/sysup && go build -o ~/.local/bin/sysup ./cmd/sysup"
     return 1
   fi
-  echo "Compilando sysup a partir do fonte..."
+  log_dim "compilando sysup a partir do fonte..."
   local tmpbin
   tmpbin="$(mktemp)"
   (cd "$REPO_DIR/sysup" && go build -o "$tmpbin" ./cmd/sysup)
   command install -m 0755 "$tmpbin" "$HOME/.local/bin/sysup"
   rm -f "$tmpbin"
-  echo "sysup instalado (build local) em $HOME/.local/bin/sysup"
+  log_ok "sysup instalado (build local) em $HOME/.local/bin/sysup"
 }
 
 # install_sysup instala um binário real (não symlink) em ~/.local/bin/sysup,
@@ -66,6 +66,6 @@ install_sysup() {
   echo "$REPO_DIR" > "$HOME/.config/sysup/repo-path"
 
   if command -v sysup >/dev/null 2>&1 || [[ -x "$HOME/.local/bin/sysup" ]]; then
-    echo "Dica: rode \`sysup polkit-setup\` pra evitar prompts de sudo repetidos no \`sysup update\` (Linux com polkit)."
+    log_dim "dica: rode \`sysup polkit-setup\` pra evitar prompts de sudo repetidos no \`sysup update\` (Linux com polkit)."
   fi
 }

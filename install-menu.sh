@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Menu interativo (setas + espaço + gum) pra instalar/restaurar pedaços do
-# ricing e o sysup numa máquina nova — automatiza o passo a passo manual
-# documentado em ricing/README.md. Ferramenta separada do sysup em si.
+# Menu interativo (setas + gum) pra instalar/restaurar pedaços do ricing e o
+# sysup numa máquina nova — automatiza o passo a passo manual documentado em
+# ricing/README.md. Ferramenta separada do sysup em si.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,39 +16,41 @@ need() {
 
 need gum
 
+source "$REPO_DIR/ricing/shell/lib/log.sh"
+
 # backup_and_link src dst — mesmo padrão de ricing/shell/install.sh: só faz
 # backup se dst existir e não for já um symlink (idempotente).
 backup_and_link() {
   local src="$1" dst="$2"
   if [[ -e "$dst" && ! -L "$dst" ]]; then
-    echo "Backup: $dst -> $dst.bak"
+    log_warn "backup: $dst -> $dst.bak"
     mv "$dst" "$dst.bak"
   fi
   mkdir -p "$(dirname "$dst")"
   ln -sf "$src" "$dst"
-  echo "Linked: $dst -> $src"
+  log_ok "$dst -> $src"
 }
 
 action_dotfiles() {
-  echo "==> Shell (.zshrc/.bashrc/fish)"
+  log_step "Shell (.zshrc/.bashrc/fish)"
   bash "$REPO_DIR/ricing/shell/install.sh"
 }
 
 action_kitty() {
-  echo "==> kitty"
+  log_step "kitty"
   for f in kitty.conf current-theme.conf; do
     backup_and_link "$REPO_DIR/ricing/terminal/kitty/$f" "$HOME/.config/kitty/$f"
   done
 }
 
 action_kde_theme() {
-  echo "==> Tema KDE (Layan)"
+  log_step "Tema KDE (Layan)"
   if ! command -v kwriteconfig6 >/dev/null 2>&1; then
-    echo "kwriteconfig6 não encontrado — isso não parece uma sessão KDE Plasma 6, pulando."
+    log_warn "kwriteconfig6 não encontrado — isso não parece uma sessão KDE Plasma 6, pulando."
     return 0
   fi
   gum confirm "Isso assume que layan-kde-git, papirus-icon-theme-git e layan-cursor-theme já estão instalados (AUR). Continuar?" || {
-    echo "cancelado (tema KDE)"
+    log_warn "cancelado (tema KDE)"
     return 0
   }
   kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage "com.github.vinceliuice.Layan"
@@ -58,61 +60,97 @@ action_kde_theme() {
   kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library "org.kde.kwin.aurorae"
   kwriteconfig6 --file kwinrc --group Plugins --key blurEnabled true
   plasmashell --replace >/dev/null 2>&1 &
-  echo "Tema aplicado (plasmashell reiniciando em segundo plano)."
+  log_ok "tema aplicado (plasmashell reiniciando em segundo plano)"
+}
+
+# WSL (Windows Terminal) e kitty nativo pedem protocolo de imagem diferente
+# no fastfetch — "auto" do fastfetch não acerta isso de forma confiável (viu
+# na prática: escolheu kitty dentro do WSL e caiu pra bytes crus na tela).
+is_wsl() { grep -qi microsoft /proc/version 2>/dev/null || [[ -n "${WSL_DISTRO_NAME:-}" ]]; }
+
+# render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/config.jsonc
+# a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo
+# pra essa máquina. É um COPY de propósito, não symlink: o valor varia por
+# máquina, então symlinkar geraria diff no git toda vez que WSL != nativo.
+render_fastfetch_config() {
+  local tmpl="$REPO_DIR/ricing/fastfetch/config.jsonc.tmpl" dst="$HOME/.config/fastfetch/config.jsonc"
+  local logo_type="kitty"
+  is_wsl && logo_type="sixel"
+
+  mkdir -p "$(dirname "$dst")"
+  if [[ -e "$dst" && ! -L "$dst" ]]; then
+    log_warn "backup: $dst -> $dst.bak"
+    mv "$dst" "$dst.bak"
+  fi
+  rm -f "$dst" # se ainda for symlink de uma instalação antiga, troca por arquivo real
+
+  sed "s/@LOGO_TYPE@/$logo_type/" "$tmpl" > "$dst"
+  log_ok "$dst (logo.type=$logo_type$(is_wsl && echo " — WSL detectado"))"
 }
 
 action_fastfetch() {
-  echo "==> fastfetch"
-  backup_and_link "$REPO_DIR/ricing/fastfetch/config.jsonc" "$HOME/.config/fastfetch/config.jsonc"
+  log_step "fastfetch"
+  render_fastfetch_config
   backup_and_link "$REPO_DIR/ricing/fastfetch/images" "$HOME/.config/fastfetch/images"
   backup_and_link "$REPO_DIR/ricing/fastfetch/presets" "$HOME/.config/fastfetch/presets"
 }
 
-action_ohmyposh() {
-  echo "==> oh-my-posh"
-  mkdir -p "$HOME/.poshthemes"
-  cp "$REPO_DIR/ricing/shell/zsh/tema/p10k.omp.json" "$HOME/.poshthemes/"
-  echo "Copiado: ~/.poshthemes/p10k.omp.json"
+action_starship() {
+  log_step "starship"
+  # shellcheck source=ricing/shell/lib/install-cli-tools.sh
+  source "$REPO_DIR/ricing/shell/lib/install-cli-tools.sh"
+  # shellcheck source=ricing/shell/lib/install-zsh-plugins.sh
+  source "$REPO_DIR/ricing/shell/lib/install-zsh-plugins.sh"
+  detect_and_offer_uninstall_prompt_managers
+  install_starship
 }
 
 action_sysup() {
-  echo "==> sysup (primeira instalação)"
+  log_step "sysup (primeira instalação)"
   # shellcheck source=ricing/shell/lib/install-sysup.sh
   source "$REPO_DIR/ricing/shell/lib/install-sysup.sh"
   install_sysup
 }
 
-mapfile -t choices < <(gum choose --no-limit \
-  --header "O que instalar/configurar? (espaço marca, enter confirma a seleção)" \
+gum style --bold --foreground 212 --border rounded --padding "0 2" --margin "1 0" \
+  "install-menu.sh — setup de ambiente"
+
+choice="$(gum choose \
+  --header "O que instalar/configurar? (setas + enter escolhe 1; rode de novo pra outra opção)" \
+  --cursor.foreground 212 --selected.foreground 42 \
   "Shell (.zshrc/.bashrc/fish)" \
   "kitty (symlink)" \
   "Tema KDE (Layan)" \
-  "fastfetch (symlink)" \
-  "oh-my-posh (copia tema)" \
-  "sysup (primeira instalação)")
+  "fastfetch (config gerado + symlink)" \
+  "starship (symlink tema)" \
+  "sysup (primeira instalação)")"
 
-if [[ ${#choices[@]} -eq 0 ]]; then
-  echo "Nada selecionado, saindo."
+if [[ -z "$choice" ]]; then
+  log_dim "nada selecionado, saindo."
   exit 0
 fi
 
-echo "Selecionado:"
-printf '  - %s\n' "${choices[@]}"
-
-gum confirm "Aplicar essas ações agora?" || {
-  echo "cancelado"
+gum confirm "Aplicar \"$choice\" agora?" || {
+  log_dim "cancelado."
   exit 0
 }
 
-for choice in "${choices[@]}"; do
-  case "$choice" in
-    "Shell (.zshrc/.bashrc/fish)") action_dotfiles ;;
-    "kitty (symlink)") action_kitty ;;
-    "Tema KDE (Layan)") action_kde_theme ;;
-    "fastfetch (symlink)") action_fastfetch ;;
-    "oh-my-posh (copia tema)") action_ohmyposh ;;
-    "sysup (primeira instalação)") action_sysup ;;
-  esac
-done
+echo
+case "$choice" in
+  "Shell (.zshrc/.bashrc/fish)") action_dotfiles ;;
+  "kitty (symlink)") action_kitty ;;
+  "Tema KDE (Layan)") action_kde_theme ;;
+  "fastfetch (config gerado + symlink)") action_fastfetch ;;
+  "starship (symlink tema)") action_starship ;;
+  "sysup (primeira instalação)") action_sysup ;;
+esac
 
-echo "Concluído."
+echo
+log_box "Concluído: $choice" 42
+
+# Recarrega o shell sozinho: como este script roda como processo filho, não
+# dá pra dar "source ~/.zshrc" no shell que te chamou daqui de dentro — o
+# jeito é substituir este processo por um shell novo (exec), que já nasce
+# lendo o .zshrc/.bashrc atualizado.
+log_dim "recarregando shell..."
+exec "${SHELL:-/bin/bash}" -l

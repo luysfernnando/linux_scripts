@@ -1,10 +1,4 @@
 # ---------------------------
-# TESTES
-# ---------------------------
-#export PATH="$HOME/.local/bin:$PATH"
-#eval "$(oh-my-posh init zsh --config ~/.poshthemes/p10k.omp.json)"
-
-# ---------------------------
 # PATH CUSTOMIZADO
 # ---------------------------
 export PATH="$HOME/bin:/usr/local/bin:$PATH"
@@ -45,10 +39,9 @@ plugins=(
 source ~/.oh-my-zsh/oh-my-zsh.sh
 
 # ---------------------------
-# OH MY POSH (TEMA)
+# STARSHIP (PROMPT)
 # ---------------------------
-# Carrega o tema usando o oh-my-posh
-eval "$(oh-my-posh init zsh --config ~/.poshthemes/p10k.omp.json)"
+eval "$(starship init zsh)"
 
 # ---------------------------
 # ALIASES DE USO COMUM
@@ -143,7 +136,12 @@ alias info='pacman -Si'
 # ---------------------------
 # COMPLETIONS
 # ---------------------------
-autoload -U compinit && compinit
+autoload -Uz compinit
+if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C
+fi
 
 # ---------------------------
 # CONFIGURAÇÕES DO TERMINAL
