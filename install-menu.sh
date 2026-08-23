@@ -105,6 +105,40 @@ action_starship() {
   install_starship
 }
 
+action_git() {
+  log_step "Git (assinatura SSH + ssh-agent)"
+  # shellcheck source=ricing/shell/lib/install-git-ssh.sh
+  source "$REPO_DIR/ricing/shell/lib/install-git-ssh.sh"
+
+  if check_sign_key; then
+    log_ok "chave de assinatura ($SIGN_KEY.pub)"
+  else
+    log_warn "faltando: chave de assinatura de commit"
+    gum confirm "Gerar chave de assinatura agora?" && install_sign_key
+  fi
+
+  if check_allowed_signers; then
+    log_ok "allowed_signers"
+  else
+    log_warn "faltando: allowed_signers"
+    install_allowed_signers
+  fi
+
+  if check_ssh_agent_socket; then
+    log_ok "ssh-agent.socket (systemd)"
+  else
+    log_warn "faltando: ssh-agent.socket habilitado"
+    install_ssh_agent_socket
+  fi
+
+  if check_keys_loaded; then
+    log_ok "chaves carregadas no ssh-agent"
+  else
+    log_warn "faltando: chaves no ssh-agent"
+    install_keys_loaded
+  fi
+}
+
 action_sysup() {
   log_step "sysup (primeira instalação)"
   # shellcheck source=ricing/shell/lib/install-sysup.sh
@@ -123,6 +157,7 @@ choice="$(gum choose \
   "Tema KDE (Layan)" \
   "fastfetch (config gerado + symlink)" \
   "starship (symlink tema)" \
+  "Git (assinatura SSH + ssh-agent)" \
   "sysup (primeira instalação)")"
 
 if [[ -z "$choice" ]]; then
@@ -142,6 +177,7 @@ case "$choice" in
   "Tema KDE (Layan)") action_kde_theme ;;
   "fastfetch (config gerado + symlink)") action_fastfetch ;;
   "starship (symlink tema)") action_starship ;;
+  "Git (assinatura SSH + ssh-agent)") action_git ;;
   "sysup (primeira instalação)") action_sysup ;;
 esac
 
