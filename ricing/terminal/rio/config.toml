@@ -1,0 +1,54 @@
+confirm-before-quit = false
+use-fork = false
+working-dir = "C:\\Users\\068895971066"
+
+# Shell padrão: PowerShell
+[shell]
+program = "C:\\Users\\068895971066\\AppData\\Local\\Microsoft\\WindowsApps\\pwsh.exe"
+args = ["-NoLogo"]
+
+# Aparência geral
+[window]
+decorations = "Buttonless"
+opacity = 0.90
+padding-x = 8
+
+[title]
+content = ""
+
+[fonts]
+family = "JetBrainsMono Nerd Font"
+size = 15.0
+
+line-height = 1.1
+scrollback-history-limit = 5000
+
+[cursor]
+shape = "block"
+blinking = true
+blinking-interval = 500
+
+# Cores Catppuccin Mocha (mesma paleta do WezTerm)
+# fonte: https://github.com/mbadolato/iTerm2-Color-Schemes/blob/master/rio/Catppuccin%20Mocha.toml
+[colors]
+background = '#1e1e2e'
+foreground = '#cdd6f4'
+selection-background = '#f5e0dc'
+selection-foreground = '#1e1e2e'
+cursor = '#f5e0dc'
+black = '#45475a'
+red = '#f38ba8'
+green = '#a6e3a1'
+yellow = '#f9e2af'
+blue = '#89b4fa'
+magenta = '#f5c2e7'
+cyan = '#94e2d5'
+white = '#bac2de'
+light_black = '#585b70'
+light_red = '#f7aec2'
+light_green = '#c2ecbf'
+light_yellow = '#fcd682'
+light_blue = '#aeccfc'
+light_magenta = '#f398da'
+light_cyan = '#b1eae1'
+light_white = '#a6adc8'

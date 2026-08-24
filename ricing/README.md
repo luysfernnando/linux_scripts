@@ -74,6 +74,18 @@ Restaurar (Windows, copiar — sem symlink fácil sem modo dev/admin):
 Copy-Item ricing\terminal\wezterm\wezterm.lua "$HOME\.wezterm.lua"
 ```
 
+## Terminal (Rio, Windows)
+
+Config em `terminal/rio/config.toml`. Alternativa ao WezTerm testada na mesma máquina — mesma paleta Catppuccin Mocha (`[colors]` colado direto no config, mesmos hex do WezTerm), `shell.program` = pwsh, opacity 0.90.
+
+Instalar: `winget install -e --id raphamorim.rio`
+
+Restaurar (Windows, copiar):
+
+```powershell
+Copy-Item ricing\terminal\rio\config.toml "$HOME\AppData\Local\rio\config.toml"
+```
+
 ## Shell (PowerShell + Starship, Windows)
 
 Config em `shell/powershell/`. Prompt via Starship (não oh-my-posh — testado, ~900ms mais lento no boot pelo módulo de 55KB que oh-my-posh gera; Starship é ~10KB). Tema em `shell/starship/windows.toml` desliga módulos de versão de linguagem (php/node/python/etc) — cada um spawna processo verificando `composer.json`/`package.json` por pasta, lento em drive de rede. `Terminal-Icons` (módulo PowerShell Gallery) dá ícones no `ls`/`Get-ChildItem`.
@@ -103,6 +115,21 @@ ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
 ```
 
 Ou simplesmente `./install-menu.sh` → "fastfetch (config gerado + symlink)", que já detecta WSL sozinho.
+
+Restaurar (Windows, copiar — `config.jsonc` tem path do logo hardcoded pra máquina Linux, `/home/lulfex/...`; ajustar `logo.source` na cópia local depois, não editar o do repo):
+
+```powershell
+winget install Fastfetch-cli.Fastfetch
+mkdir -p ~/.config/fastfetch
+Copy-Item ricing\fastfetch\config.jsonc "$HOME\.config\fastfetch\config.jsonc"
+Copy-Item -Recurse ricing\fastfetch\images "$HOME\.config\fastfetch\images"
+Copy-Item -Recurse ricing\fastfetch\presets "$HOME\.config\fastfetch\presets"
+# editar "logo.source" no config.jsonc copiado pro path Windows de images/165.png
+```
+
+WezTerm (build 2024-02) não renderiza direito o placeholder unicode do protocolo `kitty` (aparece `⸮` no lugar da imagem). Trocar `"logo.type"` de `"kitty"` pra `"iterm"` na cópia local resolve — WezTerm suporta protocolo iTerm2 nativamente, sem placeholder unicode. Também remover módulo `disk` na cópia local se quiser esconder discos (múltiplos drives montados no Windows poluem a saída).
+
+## Prompt (oh-my-posh)
 
 ## Prompt (Starship)
 
