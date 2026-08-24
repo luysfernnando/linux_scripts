@@ -1,13 +1,14 @@
 {
-  "model": "sonnet",
   "env": {
     "MAX_THINKING_TOKENS": "10000",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
     "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
   },
+  "includeCoAuthoredBy": false,
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
+  "model": "sonnet",
   "hooks": {
     "PreToolUse": [
       {
@@ -21,6 +22,7 @@
       }
     ]
   },
+  "disableRemoteControl": true,
   "enabledPlugins": {
     "caveman@caveman": true,
     "claude-mem@thedotmack": false,
@@ -59,6 +61,6 @@
   "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
-  "includeCoAuthoredBy": false,
-  "disableRemoteControl": true
+  "editorMode": "normal",
+  "autoContinueAtUsageLimit": false
 }
