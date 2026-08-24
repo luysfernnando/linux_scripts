@@ -1,9 +1,9 @@
-# Claude Skills & Rules
+# Agent Skills & Rules (Claude, Gemini / Antigravity)
 
-Skills e rules Claude Code criadas por mim. Versionadas aqui, sincronizadas pra `~/.claude/`:
+Skills e rules compartilhadas entre agentes. Versionadas aqui e sincronizadas para `~/.agents/` (Hub Central):
 
-- Skills: `claude/skills/` → `~/.agents/skills/` (fonte compartilhada entre agentes) → symlink em `~/.claude/skills/` (onde Claude Code descobre).
-- Rules: `claude/rules/` → rsync direto pra `~/.claude/rules/` (regras globais carregadas via `CLAUDE.md`/`RTK.md`).
+- Skills: `claude/skills/` → `~/.agents/skills/` → symlinks em `~/.claude/skills/` e `~/.gemini/config/skills/`.
+- Rules: `claude/rules/` → `~/.agents/rules/` → symlinks em `~/.claude/rules` e `~/.gemini/config/rules`.
 
 ## Setup
 

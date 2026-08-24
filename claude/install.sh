@@ -20,12 +20,19 @@ fi
 SKILLS_SRC_DIR="$CLAUDE_DIR/skills"
 RULES_SRC_DIR="$CLAUDE_DIR/rules"
 AGENTS_SKILLS_DIR="$HOME/.agents/skills"
-CLAUDE_RULES_DIR="$HOME/.claude/rules"
+AGENTS_RULES_DIR="$HOME/.agents/rules"
 
-# Diretórios de agente que descobrem skills via ~/.agents/skills — symlinkados
-# por skill. Hoje só o Claude Code tem esse conceito; adicionar outro agente
-# no futuro é só incluir o path aqui.
-AGENT_SKILL_DIRS=("$HOME/.claude/skills")
+# Diretórios de agente que descobrem skills e rules via ~/.agents — symlinkados
+# (Claude Code e Gemini / Antigravity CLI).
+AGENT_SKILL_DIRS=(
+  "$HOME/.claude/skills"
+  "$HOME/.gemini/config/skills"
+)
+
+AGENT_RULE_DIRS=(
+  "$HOME/.claude/rules"
+  "$HOME/.gemini/config/rules"
+)
 
 link_skill_into_agent() {
   local name="$1" agent_dir="$2"
@@ -71,14 +78,25 @@ for skill_path in "$SKILLS_SRC_DIR"/*/; do
 done
 
 log_step "Sincronizando rules"
-rsync -a --delete "$RULES_SRC_DIR/" "$CLAUDE_RULES_DIR/"
-log_ok "rules -> $CLAUDE_RULES_DIR"
+mkdir -p "$AGENTS_RULES_DIR"
+rsync -a --delete "$RULES_SRC_DIR/" "$AGENTS_RULES_DIR/"
+
+for agent_rules_dir in "${AGENT_RULE_DIRS[@]}"; do
+  mkdir -p "$(dirname "$agent_rules_dir")"
+  link_file "$AGENTS_RULES_DIR" "$agent_rules_dir"
+done
+log_ok "rules -> $AGENTS_RULES_DIR (espelhado em: ${AGENT_RULE_DIRS[*]})"
 
 log_step "Symlinkando CLAUDE.md e RTK.md"
 link_file "$CLAUDE_DIR/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 link_file "$CLAUDE_DIR/RTK.md" "$HOME/.claude/RTK.md"
 link_file "$CLAUDE_DIR/settings.json" "$HOME/.claude/settings.json"
 log_ok "CLAUDE.md + RTK.md + settings.json"
+
+log_step "Symlinkando settings.json do Antigravity CLI"
+mkdir -p "$HOME/.gemini/antigravity-cli"
+link_file "$CLAUDE_DIR/../gemini/antigravity-cli/settings.json" "$HOME/.gemini/antigravity-cli/settings.json"
+log_ok "antigravity-cli settings.json"
 
 log_step "Symlinkando filtros do rtk"
 mkdir -p "$HOME/.config/rtk"
