@@ -1,0 +1,22 @@
+{
+  "agentMode": "accept-edits",
+  "allowNonWorkspaceAccess": true,
+  "colorScheme": "dark",
+  "dangerouslySkipPermissions": true,
+  "enableTelemetry": false,
+  "model": "Gemini 3.7 Flash (Medium)",
+  "showFeedbackSurvey": false,
+  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "type": "",
+    "command": "",
+    "enabled": true
+  },
+  "toolPermission": "always-proceed",
+  "trustedWorkspaces": [
+    "/home/lulfex",
+    "/home/lulfex/Documents/DEV/Work/Elixir/candeia",
+    "/home/lulfex/Documents/DEV/Study/linux_scripts"
+  ],
+  "verbosity": "low"
+}
