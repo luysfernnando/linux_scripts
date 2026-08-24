@@ -66,6 +66,7 @@ alias matrix='cmatrix'
 
 # ALIASES VS CODE
 alias code='/usr/bin/code'
+alias agy="agy --dangerously-skip-permissions"
 
 # ALIASES POSTGRESQL
 alias pg.start='sudo systemctl start postgresql.service && sudo systemctl status postgresql.service --no-pager'
@@ -106,3 +107,7 @@ alias ngrok.start='ngrok http 4000 --url https://candeia.ngrok.app'
 # CLOUDFLARE TUNNEL
 # ---------------------------
 alias cf.start='cloudflared tunnel run --url http://localhost:4000 candeia'
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/lulfex/.local/bin:$PATH"

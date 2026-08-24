@@ -52,6 +52,7 @@ alias btop 'bpytop'
 alias matrix 'cmatrix'
 
 alias code '/usr/bin/code'
+alias agy 'agy --dangerously-skip-permissions'
 
 # ALIASES POSTGRESQL
 alias pg.start 'sudo systemctl start postgresql.service; and sudo systemctl status postgresql.service --no-pager'
