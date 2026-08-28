@@ -14,6 +14,17 @@ need() {
   }
 }
 
+is_windows() { [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; }
+
+# No Windows (git bash), winget é o caminho normal — instala gum sozinho em
+# vez de só reclamar, já que não tem pacman/apt pra sugerir.
+if is_windows && ! command -v gum >/dev/null 2>&1; then
+  need winget
+  echo "faltando: gum — instalando via winget..." >&2
+  winget install --id charmbracelet.gum -e --source winget --accept-source-agreements --accept-package-agreements
+  hash -r
+fi
+
 need gum
 
 source "$REPO_DIR/ricing/shell/lib/log.sh"
