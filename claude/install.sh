@@ -5,16 +5,21 @@ CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../ricing/shell/lib/log.sh
 source "$CLAUDE_DIR/../ricing/shell/lib/log.sh"
 
-if ! command -v rsync >/dev/null 2>&1; then
-  log_warn "faltando: rsync"
-  if command -v pacman >/dev/null 2>&1; then
-    log_dim "instale com: sudo pacman -S rsync"
-  elif command -v apt >/dev/null 2>&1; then
-    log_dim "instale com: sudo apt install rsync"
-  else
-    log_dim "instale o pacote 'rsync' pelo gerenciador da sua distro."
-  fi
-  exit 1
+# mirror_dir src dst — replica src/ em dst/, removendo o que não existe mais
+# em src (equivalente ao uso de `rsync -a --delete` abaixo). Usa rsync quando
+# disponível; no Windows (Git Bash) não tem pacote rsync real no winget, então
+# cai pro fallback rm+cp (mesmo resultado pros dois usos aqui, que são sempre
+# mirror completo de diretório).
+if command -v rsync >/dev/null 2>&1; then
+  mirror_dir() { rsync -a --delete "$1" "$2"; }
+else
+  log_dim "rsync não encontrado — usando fallback rm+cp (mesmo resultado pra mirror de diretório)"
+  mirror_dir() {
+    local src="${1%/}" dst="${2%/}"
+    rm -rf "$dst"
+    mkdir -p "$dst"
+    cp -r "$src/." "$dst/"
+  }
 fi
 
 SKILLS_SRC_DIR="$CLAUDE_DIR/skills"
@@ -68,7 +73,7 @@ log_step "Sincronizando skills"
 for skill_path in "$SKILLS_SRC_DIR"/*/; do
   name="$(basename "$skill_path")"
 
-  rsync -a --delete "$skill_path" "$AGENTS_SKILLS_DIR/$name/"
+  mirror_dir "$skill_path" "$AGENTS_SKILLS_DIR/$name/"
 
   for agent_dir in "${AGENT_SKILL_DIRS[@]}"; do
     link_skill_into_agent "$name" "$agent_dir"
@@ -79,7 +84,7 @@ done
 
 log_step "Sincronizando rules"
 mkdir -p "$AGENTS_RULES_DIR"
-rsync -a --delete "$RULES_SRC_DIR/" "$AGENTS_RULES_DIR/"
+mirror_dir "$RULES_SRC_DIR/" "$AGENTS_RULES_DIR/"
 
 for agent_rules_dir in "${AGENT_RULE_DIRS[@]}"; do
   mkdir -p "$(dirname "$agent_rules_dir")"
