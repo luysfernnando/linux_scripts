@@ -1,0 +1,41 @@
+# Paleta igual ao starship (ricing/shell/starship/linux.toml, palette
+# gruvbox_dark) — gruvbox modificado com degradê roxo->azul: yellow/orange/aqua
+# não são o gruvbox original, foram remapeados pra esse degradê.
+user: "#ebdbb2"
+group: "#928374"
+permission:
+  read: "#98971a"
+  write: "#ac72ff"
+  exec: "#cc241d"
+  exec-sticky: "#b16286"
+  no-access: "#928374"
+  octal: "#9a8aff"
+  acl: "#9a8aff"
+  context: "#88a2ff"
+date:
+  hour-old: "#98971a"
+  day-old: "#ac72ff"
+  older: "#928374"
+size:
+  none: "#928374"
+  small: "#98971a"
+  medium: "#ac72ff"
+  large: "#be5aff"
+inode:
+  valid: "#b16286"
+  invalid: "#928374"
+links:
+  valid: "#b16286"
+  invalid: "#928374"
+tree-edge: "#928374"
+git-status:
+  default: "#928374"
+  unmodified: "#928374"
+  ignored: "#928374"
+  new-in-index: "#98971a"
+  new-in-workdir: "#98971a"
+  typechange: "#ac72ff"
+  deleted: "#cc241d"
+  renamed: "#98971a"
+  modified: "#ac72ff"
+  conflicted: "#cc241d"

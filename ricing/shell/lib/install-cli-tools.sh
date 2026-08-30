@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sourced (not executed directly) por ricing/shell/install.sh — binários
-# usados nos aliases/plugins dos 3 shells (zsh/bash/fish) e pelo fastfetch:
-# lsd (alias ls/l/la/lla/lstree), fzf (dep do fzf-tab no zsh), imagemagick
+# usados nos aliases dos 2 shells (bash/fish) e pelo fastfetch:
+# lsd (alias ls/l/la/lla/lstree), fzf (fuzzy finder de uso geral), imagemagick
 # (fastfetch usa libMagickWand pra decodificar a imagem do logo — sem ela
 # cai calado pro ASCII genérico, erro real só aparece com --show-errors).
 # Cada item expõe check_<item> (só olha, sem efeito) e install_<item>
@@ -27,7 +27,7 @@ install_lsd() {
 
 check_fzf() { command -v fzf >/dev/null 2>&1; }
 install_fzf() {
-  pkg_install fzf && log_ok "fzf instalado" || log_warn "falha instalando fzf — fzf-tab (zsh) não funciona sem ele."
+  pkg_install fzf && log_ok "fzf instalado" || log_warn "falha instalando fzf."
 }
 
 check_imagemagick() { command -v magick >/dev/null 2>&1 || command -v convert >/dev/null 2>&1; }

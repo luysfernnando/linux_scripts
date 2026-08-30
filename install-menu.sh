@@ -43,7 +43,7 @@ backup_and_link() {
 }
 
 action_dotfiles() {
-  log_step "Shell (.zshrc/.bashrc/fish)"
+  log_step "Shell (.bashrc/fish)"
   bash "$REPO_DIR/ricing/shell/install.sh"
 }
 
@@ -110,8 +110,8 @@ action_starship() {
   log_step "starship"
   # shellcheck source=ricing/shell/lib/install-cli-tools.sh
   source "$REPO_DIR/ricing/shell/lib/install-cli-tools.sh"
-  # shellcheck source=ricing/shell/lib/install-zsh-plugins.sh
-  source "$REPO_DIR/ricing/shell/lib/install-zsh-plugins.sh"
+  # shellcheck source=ricing/shell/lib/install-shell-tools.sh
+  source "$REPO_DIR/ricing/shell/lib/install-shell-tools.sh"
   detect_and_offer_uninstall_prompt_managers
   install_starship
 }
@@ -168,7 +168,7 @@ gum style --bold --foreground 212 --border rounded --padding "0 2" --margin "1 0
 choice="$(gum choose \
   --header "O que instalar/configurar? (setas + enter escolhe 1; rode de novo pra outra opção)" \
   --cursor.foreground 212 --selected.foreground 42 \
-  "Shell (.zshrc/.bashrc/fish)" \
+  "Shell (.bashrc/fish)" \
   "kitty (symlink)" \
   "Tema KDE (Layan)" \
   "fastfetch (config gerado + symlink)" \
@@ -189,7 +189,7 @@ gum confirm "Aplicar \"$choice\" agora?" || {
 
 echo
 case "$choice" in
-  "Shell (.zshrc/.bashrc/fish)") action_dotfiles ;;
+  "Shell (.bashrc/fish)") action_dotfiles ;;
   "kitty (symlink)") action_kitty ;;
   "Tema KDE (Layan)") action_kde_theme ;;
   "fastfetch (config gerado + symlink)") action_fastfetch ;;
@@ -203,8 +203,8 @@ echo
 log_box "Concluído: $choice" 42
 
 # Recarrega o shell sozinho: como este script roda como processo filho, não
-# dá pra dar "source ~/.zshrc" no shell que te chamou daqui de dentro — o
+# dá pra dar "source ~/.bashrc" no shell que te chamou daqui de dentro — o
 # jeito é substituir este processo por um shell novo (exec), que já nasce
-# lendo o .zshrc/.bashrc atualizado.
+# lendo o .bashrc/config.fish atualizado.
 log_dim "recarregando shell..."
 exec "${SHELL:-/bin/bash}" -l

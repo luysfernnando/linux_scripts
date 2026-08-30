@@ -50,7 +50,7 @@ Config em `terminal/kitty/`. Tema "Idle Toes", fundo transparente. Pasta `termin
 
 - `background_opacity 0.8` + `dynamic_background_opacity yes` — transparência fundo.
 - Blur visual vem do **compositor KWin** (blur effect ativado), não do kitty — kitty Linux/X11 não suporta `background_blur` nativo (exclusivo macOS).
-- `shell` usa fish se instalado, senão zsh (`sh -c 'exec "$(command -v fish || command -v zsh)"'`) — funciona em qualquer máquina independente do shell padrão.
+- `shell` usa fish se instalado, senão bash (`sh -c 'exec "$(command -v fish || command -v bash)"'`) — funciona em qualquer máquina independente do shell padrão.
 
 Restaurar (symlink, não copiar — repo fica fonte da verdade):
 
@@ -133,10 +133,10 @@ WezTerm (build 2024-02) não renderiza direito o placeholder unicode do protocol
 
 ## Prompt (Starship)
 
-Tema em `shell/starship/linux.toml` — pasta própria porque o prompt não é exclusivo de um shell (zsh, bash e fish todos carregam o mesmo tema; só o `windows.toml`, usado pelo PowerShell, é diferente — minimalista, módulos de linguagem desligados por causa do drive de rede, ver seção acima). Preset oficial `gruvbox-rainbow` (`starship preset gruvbox-rainbow -o starship.toml`) — segmentos powerline com fundo colorido, ícone de OS/usuário, git, versões de linguagem, hora. `.zshrc`/`config.fish` carregam via starship:
+Tema em `shell/starship/linux.toml` — pasta própria porque o prompt não é exclusivo de um shell (bash e fish carregam o mesmo tema; só o `windows.toml`, usado pelo PowerShell, é diferente — minimalista, módulos de linguagem desligados por causa do drive de rede, ver seção acima). Preset oficial `gruvbox-rainbow` (`starship preset gruvbox-rainbow -o starship.toml`) — segmentos powerline com fundo colorido, ícone de OS/usuário, git, versões de linguagem, hora. `.bashrc`/`config.fish` carregam via starship:
 
 ```bash
-eval "$(starship init zsh)"   # .zshrc
+eval "$(starship init bash)"  # .bashrc
 starship init fish | source   # config.fish
 ```
 
@@ -147,13 +147,11 @@ mkdir -p ~/.config
 ln -s "$(pwd)/ricing/shell/starship/linux.toml" ~/.config/starship.toml
 ```
 
-Se a máquina tiver oh-my-posh ou powerlevel10k instalado de antes, `ricing/shell/install.sh` (ou `install-menu.sh` → "starship (symlink tema)") detecta e pergunta antes de desinstalar (via `pacman`/`apt` se veio de pacote, ou removendo o binário/pasta se foi instalação manual). Esse passo hoje só roda quando o shell detectado é zsh — fish ganha o `starship init fish` no `config.fish` mas depende do symlink já ter sido feito numa passada zsh, ou de rodar o `ln -s` manual acima.
-
-zsh também usa oh-my-zsh (`~/.oh-my-zsh`) — ver `plugins=(...)` e `ZSH_THEME` em `shell/zsh/.zshrc` (já versionado neste repo).
+Se a máquina tiver oh-my-posh instalado de antes, `ricing/shell/install.sh` (ou `install-menu.sh` → "starship (symlink tema)") detecta e pergunta antes de desinstalar (via `pacman`/`apt` se veio de pacote, ou removendo o binário se foi instalação manual) — roda pra qualquer shell detectado, não só um.
 
 ## Shell
 
-`.zshrc`, `.bashrc`, `config.fish` — cada um sua subpasta (`shell/zsh/`, `shell/bash/`, `shell/fish/`), mesmos aliases nos três. Tema do prompt fica fora dessas pastas, em `shell/starship/` (ver seção acima), por não ser exclusivo de nenhuma. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
+`.bashrc`, `config.fish` — cada um sua subpasta (`shell/bash/`, `shell/fish/`), mesmos aliases nos dois. zsh saiu do repo (pesado — oh-my-zsh + 4 plugins reparseando cada tecla digitada; fish tem highlighting/completions nativos). Tema do prompt fica fora dessas pastas, em `shell/starship/` (ver seção acima), por não ser exclusivo de nenhuma. Restaurar via `shell/install.sh` (symlink pra `~/`, backup `.bak` se já tem algo lá) ou `../install-menu.sh`. Detalhe completo no `CLAUDE.md` raiz repo (seção Ricing).
 
 ## Assinatura de commits (SSH)
 

@@ -31,6 +31,10 @@ backup_and_link() {
 backup_and_link "$SHELL_DIR/git/.gitconfig" "$HOME/.gitconfig"
 backup_and_link "$SHELL_DIR/git/allowed_signers" "$HOME/.ssh/allowed_signers"
 
+# lsd (cores/sorting) — independe do shell, symlinka sempre.
+backup_and_link "$SHELL_DIR/lsd/config.yaml" "$HOME/.config/lsd/config.yaml"
+backup_and_link "$SHELL_DIR/lsd/colors.yaml" "$HOME/.config/lsd/colors.yaml"
+
 # .gitconfig usa assinatura SSH (gpg.format=ssh) — mesmo path de chave em
 # toda máquina (~/.ssh/luysfernnando_sign_commits, keypair distinto por máquina; gerar
 # com ssh-keygen se não existir), cadastrada no GitHub como "Signing Key".
@@ -41,13 +45,14 @@ backup_and_link "$SHELL_DIR/git/allowed_signers" "$HOME/.ssh/allowed_signers"
 
 # ---------------------------
 # Só linka o profile do shell que você realmente usa ($SHELL) — evita
-# lixo de .bashrc/.zshrc linkado sem necessidade em máquina nova.
+# lixo de .bashrc linkado sem necessidade em máquina nova. Só bash/fish são
+# suportados — zsh saiu do repo (pesado, oh-my-zsh + 4 plugins reparseando
+# cada tecla digitada; fish tem highlighting/completions nativos, mais leve).
 # ---------------------------
 detected_shell="$(basename "${SHELL:-}")"
 log_step "Shell detectado: $detected_shell"
 
 case "$detected_shell" in
-  zsh)  backup_and_link "$SHELL_DIR/zsh/.zshrc" "$HOME/.zshrc" ;;
   bash) backup_and_link "$SHELL_DIR/bash/.bashrc" "$HOME/.bashrc" ;;
   fish)
     FISH_CONFIG="$HOME/.config/fish/config.fish"
@@ -63,8 +68,11 @@ case "$detected_shell" in
       log_dim "fish já configurado: $FISH_CONFIG"
     fi
     ;;
+  zsh)
+    log_warn "zsh não é mais suportado neste repo (removido — pesado, veja CLAUDE.md). Troque pro fish: chsh -s \$(command -v fish)"
+    ;;
   *)
-    log_warn "shell '$detected_shell' não suportado (só zsh/bash/fish), pulando dotfiles de shell."
+    log_warn "shell '$detected_shell' não suportado (só bash/fish), pulando dotfiles de shell."
     ;;
 esac
 
@@ -74,23 +82,17 @@ esac
 # pergunta antes de instalar qualquer coisa (rede/sudo).
 # ---------------------------
 source "$SHELL_DIR/lib/install-cli-tools.sh"
-source "$SHELL_DIR/lib/install-zsh-plugins.sh"
+source "$SHELL_DIR/lib/install-shell-tools.sh"
 
-# Gerenciador de tema antigo (oh-my-posh, powerlevel10k) rodando junto com
-# starship é lixo garantido — pergunta antes de checar/instalar o resto.
-if [[ "$detected_shell" == zsh ]]; then
-  detect_and_offer_uninstall_prompt_managers
-fi
+# Gerenciador de tema antigo (oh-my-posh) rodando junto com starship é lixo
+# garantido — pergunta antes de checar/instalar o resto.
+detect_and_offer_uninstall_prompt_managers
 
-# item_desc/item_check/item_install id — tabela de despacho. "plugin:<nome>"
-# cobre os plugins zsh (mesma lógica, url por nome via ZSH_PLUGIN_URL).
 item_desc() {
   case "$1" in
     lsd)      echo "lsd (binário — aliases ls/l/la/lla/lstree)" ;;
-    fzf)      echo "fzf (binário — dep do fzf-tab)" ;;
+    fzf)      echo "fzf (fuzzy finder de uso geral)" ;;
     imagemagick) echo "imagemagick (dep do fastfetch pra decodificar a imagem do logo)" ;;
-    ohmyzsh)  echo "oh-my-zsh (framework zsh)" ;;
-    plugin:*) echo "plugin zsh: ${1#plugin:}" ;;
     starship) echo "starship (prompt)" ;;
   esac
 }
@@ -99,8 +101,6 @@ item_check() {
     lsd)      check_lsd ;;
     fzf)      check_fzf ;;
     imagemagick) check_imagemagick ;;
-    ohmyzsh)  check_ohmyzsh ;;
-    plugin:*) check_zsh_plugin "${1#plugin:}" ;;
     starship) check_starship ;;
   esac
 }
@@ -109,16 +109,11 @@ item_install() {
     lsd)      install_lsd ;;
     fzf)      install_fzf ;;
     imagemagick) install_imagemagick ;;
-    ohmyzsh)  install_ohmyzsh ;;
-    plugin:*) install_zsh_plugin "${1#plugin:}" ;;
     starship) install_starship ;;
   esac
 }
 
-items=(lsd fzf imagemagick)
-if [[ "$detected_shell" == zsh ]]; then
-  items+=(ohmyzsh plugin:zsh-autosuggestions plugin:fast-syntax-highlighting plugin:zsh-completions plugin:fzf-tab starship)
-fi
+items=(lsd fzf imagemagick starship)
 
 echo
 log_step "Checando dependências..."
@@ -162,7 +157,6 @@ install_sysup
 # Reload certo pro shell atual
 # ---------------------------
 case "$detected_shell" in
-  zsh)  reload_cmd="source ~/.zshrc" ;;
   bash) reload_cmd="source ~/.bashrc" ;;
   fish) reload_cmd="exec fish" ;;
   *)    reload_cmd="(shell atual: $detected_shell, recarregue manualmente)" ;;

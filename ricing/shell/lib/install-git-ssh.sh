@@ -48,7 +48,7 @@ install_allowed_signers() {
 }
 
 # ssh-agent via socket-activation do systemd (sobrevive ao terminal fechar,
-# ao contrário de "eval \$(ssh-agent)" solto no .zshrc) + export global via
+# ao contrário de "eval \$(ssh-agent)" solto no .bashrc) + export global via
 # environment.d pra apps gráficos (GitKraken) herdarem SSH_AUTH_SOCK mesmo
 # não sendo filhos do shell.
 check_ssh_agent_socket() { systemctl --user is-enabled --quiet ssh-agent.socket 2>/dev/null; }
