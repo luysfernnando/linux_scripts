@@ -65,7 +65,9 @@ Qualquer um dos 3 falhando é motivo de recomendação (corrigir gatilho, consol
    - Clássico com modelo diferente: só compensa quando modelo mais barato (Haiku/Flash) numa tarefa de triagem/alto-volume supera o custo de recarga sem cache. Padrão tipo Orca (roteamento por custo), não divisão de papel fixo (não criar "agente front-end" + "agente back-end" fixos — rule resolve de graça).
 5. Não bateu em nada com convicção? → Provavelmente não precisa existir como config formal. Instrução pontual na conversa, não fixar.
 
-## 3b. Modo global (evolução semanal)
+## 3b. Modo global (manual, sem agendamento)
+
+Sem cron: rotina cloud não enxerga `~/.agents`/memory local; agendamento local do Claude Code (`CronCreate`) é session-only, expira em 7 dias — nenhum dos dois serve pra isso. Usuário roda quando quiser, esta skill só avisa se `last_run` (memory) tá velho.
 
 Difere do resto: em vez de auditar 1 repo, varre `~/.agents/rules/common/*`, `~/.agents/skills/*` e os repos listados na memory index (`~/.claude/projects/*/memory/MEMORY.md`).
 
