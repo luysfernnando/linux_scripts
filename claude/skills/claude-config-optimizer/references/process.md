@@ -65,6 +65,20 @@ Qualquer um dos 3 falhando é motivo de recomendação (corrigir gatilho, consol
    - Clássico com modelo diferente: só compensa quando modelo mais barato (Haiku/Flash) numa tarefa de triagem/alto-volume supera o custo de recarga sem cache. Padrão tipo Orca (roteamento por custo), não divisão de papel fixo (não criar "agente front-end" + "agente back-end" fixos — rule resolve de graça).
 5. Não bateu em nada com convicção? → Provavelmente não precisa existir como config formal. Instrução pontual na conversa, não fixar.
 
+## 3b. Modo global (evolução semanal)
+
+Difere do resto: em vez de auditar 1 repo, varre `~/.agents/rules/common/*`, `~/.agents/skills/*` e os repos listados na memory index (`~/.claude/projects/*/memory/MEMORY.md`).
+
+Critério "candidata a subir pra global" (regra já num repo, deveria estar em `~/.agents/`):
+- Fala de COMO o Claude trabalha (idioma de commit, workflow, estilo de resposta) — não O QUE o projeto faz (schema, domínio, regra de negócio). Regra de domínio nunca sobe.
+- OU mesma regra aparece em 2+ repos com texto quase igual (duplicação — tokens pagos 2x, risco de uma desatualizar sem a outra acompanhar).
+
+Ação: mover conteúdo pra `~/.agents/rules/common/*.md` (ou skill global equivalente), apagar cópia local de cada repo, listar quais repos perderam o arquivo. Mesma regra de aprovação da seção 6 — nunca mover sem mostrar tabela primeiro.
+
+Saída desse modo persiste em `references/reports/<data>.md` (git-tracked, serve de log histórico — diff entre semanas via `git log` no arquivo, não precisa duplicar "o que já foi sugerido" em outro lugar).
+
+Estado da última rodada (só cursor, não conteúdo) fica em memory tipo `reference`, projeto `linux_scripts` — 2 campos: `last_run` (data) e `last_report` (path relativo em `reports/`). Cron semanal lê esse memory antes de rodar de novo; se `last_run` tiver menos de 6 dias, não roda.
+
 ## 4. Sinais de over-engineering
 
 Ver `references/decision-framework.md` → "Sinais de camada errada".
