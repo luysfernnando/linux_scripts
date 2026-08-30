@@ -75,6 +75,15 @@ Critério "candidata a subir pra global" (regra já num repo, deveria estar em `
 
 Ação: mover conteúdo pra `~/.agents/rules/common/*.md` (ou skill global equivalente), apagar cópia local de cada repo, listar quais repos perderam o arquivo. Mesma regra de aprovação da seção 6 — nunca mover sem mostrar tabela primeiro.
 
+Receita de inventário (roda antes de comparar):
+```bash
+grep -rl "<termo-candidato>" /home/lulfex/.claude/projects/*/memory/*.md
+grep -n "<termo-candidato>" /home/lulfex/.agents/rules/common/*.md
+```
+Termo-candidato vem de: friction/suggestion do `/insights` (2b), ou regra repetida achada manualmente. Só recomenda promoção com os dois greps rodados — 2+ repo com achado no primeiro grep, ausente no segundo.
+
+Coluna extra obrigatória na tabela de saída (seção 6) neste modo: **Evidência** — `confirmado (grep: <comando>)` ou `não verificado (só citado em /insights, arquivo/local não encontrado)`. Nunca recomendar ação em cima de achado não verificado — só listar como pendência de verificação.
+
 Saída desse modo persiste em `references/reports/<data>.md` (git-tracked, serve de log histórico — diff entre semanas via `git log` no arquivo, não precisa duplicar "o que já foi sugerido" em outro lugar).
 
 Estado da última rodada (só cursor, não conteúdo) fica em memory tipo `reference`, projeto `linux_scripts` — 2 campos: `last_run` (data) e `last_report` (path relativo em `reports/`). Cron semanal lê esse memory antes de rodar de novo; se `last_run` tiver menos de 6 dias, não roda.
