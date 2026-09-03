@@ -6,25 +6,63 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+is_windows() { [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; }
+
 need() {
   command -v "$1" >/dev/null 2>&1 || {
     echo "faltando: $1" >&2
-    echo "Instale com: sudo pacman -S gum   (ou: go install github.com/charmbracelet/gum@latest)" >&2
+    if is_windows; then
+      echo "Instale com: winget install $1" >&2
+    elif [[ -f /etc/debian_version ]]; then
+      echo "Instale com: sudo apt install $1" >&2
+    else
+      echo "Instale com: sudo pacman -S $1" >&2
+    fi
     exit 1
   }
 }
 
-is_windows() { [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; }
-
-# No Windows (git bash), winget é o caminho normal — instala gum sozinho em
-# vez de só reclamar, já que não tem pacman/apt pra sugerir.
-if is_windows && ! command -v gum >/dev/null 2>&1; then
-  need winget
-  echo "faltando: gum — instalando via winget..." >&2
-  winget install --id charmbracelet.gum -e --source winget --accept-source-agreements --accept-package-agreements
+# add_winget_pkg_to_path bin winget_id — winget "cria" um alias de linha de
+# comando em WinGet/Links via symlink NTFS, mas isso exige Developer Mode
+# ligado ou terminal elevado — sem isso ele finge sucesso e o symlink nunca
+# existe. O jeito confiável é achar o .exe direto dentro de
+# WinGet/Packages/<winget_id>_* (estrutura interna varia por pacote, então
+# busca recursiva) e somar o dir dele no PATH. Retorna 1 se não achou nada
+# instalado (nem pacote, nem exe dentro dele).
+add_winget_pkg_to_path() {
+  local bin="$1" winget_id="$2"
+  local appdata_unix pkg_glob pkg_dir exe_path
+  appdata_unix="${LOCALAPPDATA//\\//}"
+  appdata_unix="$(sed -E 's#^([A-Za-z]):#/\L\1#' <<<"$appdata_unix")"
+  pkg_glob="$appdata_unix/Microsoft/WinGet/Packages/${winget_id}"_*
+  pkg_dir="$(compgen -G "$pkg_glob" | head -1)"
+  [[ -n "$pkg_dir" ]] || return 1
+  exe_path="$(find "$pkg_dir" -iname "${bin}.exe" | head -1)"
+  [[ -n "$exe_path" ]] || return 1
+  export PATH="$PATH:$(dirname "$exe_path")"
   hash -r
-fi
+}
 
+# winget_install_if_missing bin winget_id — no Windows (git bash), winget é o
+# caminho normal pra instalar sozinho em vez de só reclamar, já que não tem
+# pacman/apt pra sugerir.
+winget_install_if_missing() {
+  local bin="$1" winget_id="$2"
+  is_windows || return 0
+  command -v "$bin" >/dev/null 2>&1 && return 0
+
+  # Já instalado por uma sessão anterior, só que o PATH desta sessão nova
+  # ainda não sabe disso (o fix de PATH abaixo só vale pro processo atual) —
+  # acha e usa sem chamar o winget de novo.
+  add_winget_pkg_to_path "$bin" "$winget_id" && return 0
+
+  need winget
+  echo "faltando: $bin — instalando via winget..." >&2
+  winget install --id "$winget_id" -e --source winget --accept-source-agreements --accept-package-agreements
+  add_winget_pkg_to_path "$bin" "$winget_id"
+}
+
+winget_install_if_missing gum charmbracelet.gum
 need gum
 
 source "$REPO_DIR/ricing/shell/lib/log.sh"
@@ -34,8 +72,18 @@ source "$REPO_DIR/ricing/shell/lib/log.sh"
 backup_and_link() {
   local src="$1" dst="$2"
   if [[ -e "$dst" && ! -L "$dst" ]]; then
-    log_warn "backup: $dst -> $dst.bak"
-    mv "$dst" "$dst.bak"
+    # No Windows, ln -s em diretório sem Developer Mode/terminal elevado cai
+    # pra copiar o conteúdo em vez de linkar de verdade — dst nunca vira
+    # symlink, então toda re-execução veria "conteúdo novo" aqui. Se for
+    # idêntico ao src (ou seja, é essa cópia-fallback de uma execução
+    # anterior, não dado do usuário), só substitui em vez de empilhar backup.
+    if diff -rq "$src" "$dst" >/dev/null 2>&1; then
+      rm -rf "$dst"
+    else
+      log_warn "backup: $dst -> $dst.bak"
+      rm -rf "$dst.bak"
+      mv "$dst" "$dst.bak"
+    fi
   fi
   mkdir -p "$(dirname "$dst")"
   ln -sf "$src" "$dst"
@@ -101,6 +149,8 @@ render_fastfetch_config() {
 
 action_fastfetch() {
   log_step "fastfetch"
+  winget_install_if_missing fastfetch Fastfetch-cli.Fastfetch
+  need fastfetch
   render_fastfetch_config
   backup_and_link "$REPO_DIR/ricing/fastfetch/images" "$HOME/.config/fastfetch/images"
   backup_and_link "$REPO_DIR/ricing/fastfetch/presets" "$HOME/.config/fastfetch/presets"
@@ -205,6 +255,11 @@ log_box "Concluído: $choice" 42
 # Recarrega o shell sozinho: como este script roda como processo filho, não
 # dá pra dar "source ~/.bashrc" no shell que te chamou daqui de dentro — o
 # jeito é substituir este processo por um shell novo (exec), que já nasce
-# lendo o .bashrc/config.fish atualizado.
-log_dim "recarregando shell..."
-exec "${SHELL:-/bin/bash}" -l
+# lendo o .bashrc/config.fish atualizado. No Windows isso não faz sentido: o
+# script já roda dentro do Git Bash chamado pelo install-menu.ps1 a partir do
+# PowerShell, e um exec aqui troca o processo por outro Git Bash em vez de
+# voltar pro PowerShell de quem chamou.
+if ! is_windows; then
+  log_dim "recarregando shell..."
+  exec "${SHELL:-/bin/bash}" -l
+fi
