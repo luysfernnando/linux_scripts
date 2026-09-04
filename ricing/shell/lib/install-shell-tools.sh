@@ -57,6 +57,7 @@ install_powershell_profile() {
   local pwsh_bin
 
   backup_and_link "$ps_profile_src" "$ps_profile_dst"
+  install_windows_terminal_settings
 
   pwsh_bin="$(command -v pwsh || true)"
   if [[ -z "$pwsh_bin" ]]; then
@@ -73,6 +74,27 @@ install_powershell_profile() {
       log_warn "falha instalando Terminal-Icons — instale manualmente: Install-Module Terminal-Icons -Scope CurrentUser"
     fi
   fi
+}
+
+# install_windows_terminal_settings — a fonte do Windows Terminal mora só no
+# settings.json dele (não no wezterm.lua), e precisa ser Nerd Font
+# (JetBrainsMono NFM) com builtinGlyphs desligado, senão os glifos do starship
+# (separadores powerline, ícone de SO, relógio) saem quebrados nas abas dele.
+# Os `guid` dos profiles são gerados por máquina — numa máquina nova, deixar o
+# Windows Terminal gerar o settings.json dele antes e conferir a lista depois.
+install_windows_terminal_settings() {
+  local src="$_SHELL_TOOLS_LIB_DIR/../../terminal/windows-terminal/settings.json"
+  local dst_dir
+
+  command -v cygpath >/dev/null 2>&1 || { log_warn "cygpath ausente — pulando settings.json do Windows Terminal"; return 0; }
+  dst_dir="$(cygpath -u "${LOCALAPPDATA:-}")/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState"
+  if [[ ! -d "$dst_dir" ]]; then
+    log_dim "Windows Terminal não instalado (ou nunca aberto) — pulando settings.json"
+    return 0
+  fi
+
+  backup_and_link "$src" "$dst_dir/settings.json" || return 0
+  log_dim "confira os guid dos profiles: são gerados por máquina"
 }
 
 # ---------------------------

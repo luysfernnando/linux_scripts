@@ -74,6 +74,21 @@ Restaurar (Windows, copiar — sem symlink fácil sem modo dev/admin):
 Copy-Item ricing\terminal\wezterm\wezterm.lua "$HOME\.wezterm.lua"
 ```
 
+## Terminal (Windows Terminal)
+
+Config em `terminal/windows-terminal/settings.json`. Usado pra abas WSL (Arch), Nushell, pwsh e SSH. Fonte `JetBrainsMono NFM` com `builtinGlyphs: false` — sem isso o Windows Terminal desenha os box-drawing com glifos próprios e os ícones Nerd Font do starship (separadores powerline, ícone de SO, relógio) saem errados. Opacity 80, acrylic na tab row, `Ctrl+C`/`Ctrl+V` copiar/colar, `alt+shift+d` duplica pane.
+
+Restaurar (Windows, symlink — precisa modo desenvolvedor ligado, ou terminal como admin):
+
+```powershell
+$real = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+Copy-Item $real "$real.bak" -ErrorAction SilentlyContinue
+Remove-Item $real -Force -ErrorAction SilentlyContinue
+New-Item -ItemType SymbolicLink -Path $real -Target "$(Get-Location)\ricing\terminal\windows-terminal\settings.json"
+```
+
+Os `guid` dos profiles são gerados por máquina (source WSL/nu/pwsh); numa máquina nova, deixar o Windows Terminal gerar o `settings.json` dele primeiro e trocar só os `guid` da lista, ou aceitar que perfis não resolvidos ficam ocultos.
+
 ## Terminal (Rio, Windows)
 
 Config em `terminal/rio/config.toml`. Alternativa ao WezTerm testada na mesma máquina — mesma paleta Catppuccin Mocha (`[colors]` colado direto no config, mesmos hex do WezTerm), `shell.program` = pwsh, opacity 0.90.
