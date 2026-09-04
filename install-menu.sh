@@ -154,7 +154,8 @@ find_magick() {
 # fastfetch sobrepõe a imagem: `raw` não sabe o tamanho do blob, só reserva as
 # células que a config declarar.
 render_sixel_logo() {
-  local png="$1" rows="$2" out="$HOME/.config/fastfetch/165.sixel" magick src dst
+  local png="$1" rows="$2" magick src dst out
+  out="$HOME/.config/fastfetch/${FASTFETCH_LOGO_IMG%.*}.sixel"
   magick="$(find_magick)" || return 1
   src="$png"
   dst="$out"
@@ -175,6 +176,11 @@ render_sixel_logo() {
 FASTFETCH_CELL_PX_W=9
 FASTFETCH_CELL_PX_H=18
 
+# Logo: nome de um arquivo em ricing/fastfetch/images/. Trocar a imagem = trocar
+# esta linha e rodar a ação "fastfetch" do menu; o resto (sixel, largura,
+# altura) é recalculado.
+FASTFETCH_LOGO_IMG=165.png
+
 # render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/config.jsonc
 # a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo e
 # @LOGO_PATH@ pelo path absoluto do logo nessa máquina (no Windows o
@@ -185,7 +191,7 @@ render_fastfetch_config() {
   local tmpl="$REPO_DIR/ricing/fastfetch/config.jsonc.tmpl" dst="$HOME/.config/fastfetch/config.jsonc"
   local logo_type logo_path png sixel logo_w logo_h
   logo_type="$(fastfetch_logo_type)"
-  png="$HOME/.config/fastfetch/images/165.png"
+  png="$HOME/.config/fastfetch/images/$FASTFETCH_LOGO_IMG"
   logo_path="$png"
   logo_w=40
   logo_h=20
