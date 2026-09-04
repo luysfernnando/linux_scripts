@@ -103,19 +103,114 @@ action_kde_theme() {
   log_ok "tema aplicado (plasmashell reiniciando em segundo plano)"
 }
 
-# WSL (Windows Terminal) e kitty nativo pedem protocolo de imagem diferente
-# no fastfetch — "auto" do fastfetch não acerta isso de forma confiável (viu
-# na prática: escolheu kitty dentro do WSL e caiu pra bytes crus na tela).
+# Cada terminal pede um protocolo de imagem diferente no fastfetch — "auto" do
+# fastfetch não acerta de forma confiável (viu na prática: escolheu kitty
+# dentro do WSL e caiu pra bytes crus na tela).
 is_wsl() { grep -qi microsoft /proc/version 2>/dev/null || [[ -n "${WSL_DISTRO_NAME:-}" ]]; }
 
+# fastfetch_logo_type — protocolo por terminal, não só por SO:
+#   kitty nativo -> kitty
+#   Windows      -> raw (sixel PRÉ-CONVERTIDO, ver render_sixel_logo)
+#   WSL          -> sixel (lá o fastfetch acha a libMagickCore certa)
+#
+# No Windows o `sixel` do fastfetch não funciona: ele dlopen
+# libMagickCore-7.Q16HDRI-10.dll (naming do MSYS2, ABI do 7.1.1) e o instalador
+# oficial entrega CORE_RL_MagickCore_.dll do 7.1.2 — renomear tira o "library
+# not found" mas cai em "Failed to load / convert", porque a ABI difere. `iterm`
+# só serve pro WezTerm (o Windows Terminal não fala iTerm2, imprime um "m"
+# solto). Solução: converter com o magick.exe e imprimir o .sixel com
+# `--logo-type raw`, que despeja o arquivo byte a byte. `file-raw` NÃO serve:
+# trata o arquivo como linhas de texto e injeta escapes no meio do blob DCS,
+# embaralhando a tela. Como o WezTerm também renderiza sixel, `raw` cobre os
+# dois terminais do Windows.
+fastfetch_logo_type() {
+  if is_wsl; then
+    echo sixel
+  elif is_windows; then
+    echo raw
+  else
+    echo kitty
+  fi
+}
+
+# find_magick — path do magick. O instalador oficial do Windows não coloca o
+# diretório no PATH do Git Bash, então cai pro Program Files.
+find_magick() {
+  local m
+  if command -v magick >/dev/null 2>&1; then
+    command -v magick
+    return 0
+  fi
+  for m in /c/Program\ Files/ImageMagick-*/magick.exe; do
+    [[ -x "$m" ]] && { echo "$m"; return 0; }
+  done
+  return 1
+}
+
+# render_sixel_logo <png> <rows> — converte o PNG pra sixel com o magick e ecoa
+# o path do .sixel. Falha (status 1) se o magick não existir.
+#
+# A altura em px tem que casar com a grade do terminal, senão o texto do
+# fastfetch sobrepõe a imagem: `raw` não sabe o tamanho do blob, só reserva as
+# células que a config declarar.
+render_sixel_logo() {
+  local png="$1" rows="$2" out="$HOME/.config/fastfetch/165.sixel" magick src dst
+  magick="$(find_magick)" || return 1
+  src="$png"
+  dst="$out"
+  # magick.exe é binário nativo: o auto-translate de path do MSYS não alcança o
+  # argumento de saída por causa do prefixo `sixel:`, então traduz na mão.
+  if is_windows; then
+    src="$(cygpath -m "$png")"
+    dst="$(cygpath -m "$out")"
+  fi
+  "$magick" "$src" -resize "x$((rows * FASTFETCH_CELL_PX_H))" -colors 256 "sixel:$dst" 2>/dev/null || return 1
+  [[ -s "$out" ]] || return 1
+  echo "$out"
+}
+
+# Célula do terminal em px (JetBrainsMono NFM 11pt no Windows Terminal ≈ 9x18).
+# Usado só pra dimensionar o sixel; erro aqui aparece como imagem cortada ou
+# texto por cima dela.
+FASTFETCH_CELL_PX_W=9
+FASTFETCH_CELL_PX_H=18
+
 # render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/config.jsonc
-# a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo
-# pra essa máquina. É um COPY de propósito, não symlink: o valor varia por
-# máquina, então symlinkar geraria diff no git toda vez que WSL != nativo.
+# a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo e
+# @LOGO_PATH@ pelo path absoluto do logo nessa máquina (no Windows o
+# fastfetch.exe não entende o path POSIX do Git Bash). É um COPY de propósito,
+# não symlink: os dois valores variam por máquina, então symlinkar geraria diff
+# no git toda vez que WSL != nativo.
 render_fastfetch_config() {
   local tmpl="$REPO_DIR/ricing/fastfetch/config.jsonc.tmpl" dst="$HOME/.config/fastfetch/config.jsonc"
-  local logo_type="kitty"
-  is_wsl && logo_type="sixel"
+  local logo_type logo_path png sixel logo_w logo_h
+  logo_type="$(fastfetch_logo_type)"
+  png="$HOME/.config/fastfetch/images/165.png"
+  logo_path="$png"
+  logo_w=40
+  logo_h=20
+
+  if [[ "$logo_type" == "raw" ]]; then
+    if sixel="$(render_sixel_logo "$png" "$logo_h")"; then
+      logo_path="$sixel"
+      # Largura em células a partir do aspect ratio real: o sixel foi
+      # redimensionado por altura, então a largura em px é w/h * altura.
+      local px_w px_h magick png_native
+      magick="$(find_magick)"
+      png_native="$png"
+      is_windows && png_native="$(cygpath -m "$png")"
+      read -r px_w px_h < <("$magick" identify -format '%w %h' "$png_native")
+      logo_w=$(((px_w * logo_h * FASTFETCH_CELL_PX_H / px_h + FASTFETCH_CELL_PX_W - 1) / FASTFETCH_CELL_PX_W))
+    else
+      log_warn "magick.exe não encontrado — sem ele não dá pra converter o logo pra sixel"
+      log_dim "instale com: winget install ImageMagick.ImageMagick"
+      logo_type=builtin
+    fi
+  fi
+
+  # Forward slash mesmo no Windows: o fastfetch aceita, e evita ter que escapar
+  # backslash dentro do JSON.
+  is_windows && logo_path="$(cygpath -m "$logo_path")"
 
   mkdir -p "$(dirname "$dst")"
   if [[ -e "$dst" && ! -L "$dst" ]]; then
@@ -124,17 +219,27 @@ render_fastfetch_config() {
   fi
   rm -f "$dst" # se ainda for symlink de uma instalação antiga, troca por arquivo real
 
-  sed "s/@LOGO_TYPE@/$logo_type/" "$tmpl" > "$dst"
-  log_ok "$dst (logo.type=$logo_type$(is_wsl && echo " — WSL detectado"))"
+  sed -e "s/@LOGO_TYPE@/$logo_type/" \
+    -e "s|@LOGO_PATH@|$logo_path|" \
+    -e "s/@LOGO_W@/$logo_w/" \
+    -e "s/@LOGO_H@/$logo_h/" \
+    "$tmpl" > "$dst"
+  log_ok "$dst (logo.type=$logo_type, logo=$logo_path, ${logo_w}x${logo_h})"
+
+  if [[ "$logo_type" == "sixel" ]] && ! command -v magick >/dev/null 2>&1 && ! command -v convert >/dev/null 2>&1; then
+    log_warn "sixel precisa de imagemagick pra decodificar a imagem — sem ele o logo não aparece"
+  fi
 }
 
 action_fastfetch() {
   log_step "fastfetch"
   winget_install_if_missing fastfetch Fastfetch-cli.Fastfetch
   need fastfetch
-  render_fastfetch_config
+  # images/ antes do config: render_fastfetch_config lê o PNG pra converter em
+  # sixel e medir o aspect ratio.
   backup_and_link "$REPO_DIR/ricing/fastfetch/images" "$HOME/.config/fastfetch/images"
   backup_and_link "$REPO_DIR/ricing/fastfetch/presets" "$HOME/.config/fastfetch/presets"
+  render_fastfetch_config
 }
 
 action_starship() {
