@@ -78,7 +78,7 @@ install_powershell_profile() {
 
 # install_windows_terminal_settings — a fonte do Windows Terminal mora só no
 # settings.json dele (não no wezterm.lua), e precisa ser Nerd Font
-# (JetBrainsMono NFM) com builtinGlyphs desligado, senão os glifos do starship
+# (JetBrainsMono NF) com builtinGlyphs desligado, senão os glifos do starship
 # (separadores powerline, ícone de SO, relógio) saem quebrados nas abas dele.
 # Os `guid` dos profiles são gerados por máquina — numa máquina nova, deixar o
 # Windows Terminal gerar o settings.json dele antes e conferir a lista depois.

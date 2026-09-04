@@ -76,7 +76,9 @@ Copy-Item ricing\terminal\wezterm\wezterm.lua "$HOME\.wezterm.lua"
 
 ## Terminal (Windows Terminal)
 
-Config em `terminal/windows-terminal/settings.json`. Usado pra abas WSL (Arch), Nushell, pwsh e SSH. Fonte `JetBrainsMono NFM` com `builtinGlyphs: false` — sem isso o Windows Terminal desenha os box-drawing com glifos próprios e os ícones Nerd Font do starship (separadores powerline, ícone de SO, relógio) saem errados. Opacity 80, acrylic na tab row, `Ctrl+C`/`Ctrl+V` copiar/colar, `alt+shift+d` duplica pane.
+Config em `terminal/windows-terminal/settings.json`. Usado pra abas WSL (Arch), Nushell, pwsh e SSH. Fonte `JetBrainsMono NF` com `builtinGlyphs: false` — sem isso o Windows Terminal desenha os box-drawing com glifos próprios e os ícones Nerd Font do starship (separadores powerline, ícone de SO, relógio) saem errados.
+
+`NF` e não `NFM` de propósito: a variante Mono comprime todo glifo em uma célula, o que deixa os ícones uniformes mas pequenos; a não-Mono respeita a largura de design e os ícones ficam maiores. O preço é ficarem desiguais entre si, porque cada um vem de um set patchado diferente (Material Design, Font Awesome, Octicons, Seti) com grid próprio. Trocar entre as duas é uma linha em `profiles.defaults.font.face`, mas exige fechar o Windows Terminal inteiro — abrir aba nova não recarrega a fonte. Opacity 80, acrylic na tab row, `Ctrl+C`/`Ctrl+V` copiar/colar, `alt+shift+d` duplica pane.
 
 Restaurar (Windows, symlink — precisa modo desenvolvedor ligado, ou terminal como admin):
 
@@ -139,7 +141,7 @@ A saída é converter fora do fastfetch: `render_sixel_logo` no `install-menu.sh
 Duas armadilhas:
 
 - **`file-raw` não serve** — trata o arquivo como linhas de texto e injeta escapes no meio do blob DCS, embaralhando a tela em listras. Tem que ser `raw`.
-- **`width`/`height` são só reserva de espaço** — `raw` não sabe o tamanho do blob. Se não casarem com o sixel, o texto sobrepõe a imagem. O install calcula a largura pelo aspect ratio real (`magick identify`) e pela célula do terminal (`FASTFETCH_CELL_PX_W`/`_H`, ≈9x18 pra JetBrainsMono NFM 11pt).
+- **`width`/`height` são só reserva de espaço** — `raw` não sabe o tamanho do blob. Se não casarem com o sixel, o texto sobrepõe a imagem. O install calcula a largura pelo aspect ratio real (`magick identify`) e pela célula do terminal (`FASTFETCH_CELL_PX_W`/`_H`, ≈9x18 pra JetBrainsMono NF 11pt).
 
 ### Restaurar
 

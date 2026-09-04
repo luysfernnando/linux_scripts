@@ -170,7 +170,7 @@ render_sixel_logo() {
   echo "$out"
 }
 
-# Célula do terminal em px (JetBrainsMono NFM 11pt no Windows Terminal ≈ 9x18).
+# Célula do terminal em px (JetBrainsMono NF 11pt no Windows Terminal ≈ 9x18).
 # Usado só pra dimensionar o sixel; erro aqui aparece como imagem cortada ou
 # texto por cima dela.
 FASTFETCH_CELL_PX_W=9
