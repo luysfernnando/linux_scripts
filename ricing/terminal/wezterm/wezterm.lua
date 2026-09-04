@@ -13,8 +13,13 @@ config.color_scheme = 'Catppuccin Mocha' -- outras opções: 'Tokyo Night', 'Dra
 config.window_background_opacity = 0.90
 config.text_background_opacity = 1.0
 
--- Fonte (precisa ter instalada - baixe uma Nerd Font)
+-- Fonte (precisa ter instalada - baixe uma Nerd Font). Nome de família
+-- depende de como o instalador do Nerd Fonts empacotou: variante "Mono"
+-- registra como "JetBrainsMono NFM" (não "JetBrainsMono Nerd Font") — sem o
+-- nome certo o WezTerm cai pro fallback sem glifos e os ícones do starship
+-- (branch, pasta, lock) somem.
 config.font = wezterm.font_with_fallback({
+  'JetBrainsMono NFM',
   'JetBrainsMono Nerd Font',
   'Maple Mono NF',
 })
