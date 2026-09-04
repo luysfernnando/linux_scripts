@@ -133,6 +133,25 @@ fastfetch_logo_type() {
   fi
 }
 
+# fastfetch_os_icon — ícone de SO pro @OS_ICON@ do template.
+#
+# O template fixa um ícone por módulo (todos do set Material Design, pra ficarem
+# do mesmo tamanho visual — ver ricing/README.md), mas o de SO é o único que tem
+# que variar por plataforma.
+#
+# Bytes UTF-8 crus e não o glifo literal (nem `\U`, que o printf do bash não
+# entende): esses codepoints estão no plano 1 do Unicode e não sobrevivem a
+# edição por ferramenta que normaliza texto.
+fastfetch_os_icon() {
+  if is_windows; then
+    printf '\xf3\xb0\x96\xb3' # U+F05B3 md-microsoft_windows
+  elif [[ "$(uname -s)" == Darwin ]]; then
+    printf '\xf3\xb0\x80\xb5' # U+F0035 md-apple
+  else
+    printf '\xf3\xb0\x8c\xbd' # U+F033D md-linux
+  fi
+}
+
 # find_magick — path do magick. O instalador oficial do Windows não coloca o
 # diretório no PATH do Git Bash, então cai pro Program Files.
 find_magick() {
@@ -229,6 +248,7 @@ render_fastfetch_config() {
     -e "s|@LOGO_PATH@|$logo_path|" \
     -e "s/@LOGO_W@/$logo_w/" \
     -e "s/@LOGO_H@/$logo_h/" \
+    -e "s/@OS_ICON@/$(fastfetch_os_icon)/" \
     "$tmpl" > "$dst"
   log_ok "$dst (logo.type=$logo_type, logo=$logo_path, ${logo_w}x${logo_h})"
 
