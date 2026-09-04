@@ -1,2 +1,2 @@
 Import-Module Terminal-Icons
-. "$HOME\.starship-init.ps1"
+Invoke-Expression (&starship init powershell)
