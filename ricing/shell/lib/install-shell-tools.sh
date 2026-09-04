@@ -58,6 +58,7 @@ install_powershell_profile() {
 
   backup_and_link "$ps_profile_src" "$ps_profile_dst"
   install_windows_terminal_settings
+  install_nushell_config
 
   pwsh_bin="$(command -v pwsh || true)"
   if [[ -z "$pwsh_bin" ]]; then
@@ -74,6 +75,25 @@ install_powershell_profile() {
       log_warn "falha instalando Terminal-Icons — instale manualmente: Install-Module Terminal-Icons -Scope CurrentUser"
     fi
   fi
+}
+
+# install_nushell_config — o Nushell é um dos perfis do Windows Terminal aqui, e
+# precisa do mesmo wrapper de `fastfetch --full` que o pwsh (sem ele sobra linha
+# em branco até o prompt, porque o fastfetch emite uma depois do bloco quando há
+# logo). O `use ~/.cache/starship/init.nu` do config assume o cache do starship
+# já gerado — o starship faz isso sozinho no primeiro prompt.
+install_nushell_config() {
+  local src="$_SHELL_TOOLS_LIB_DIR/../nushell/config.nu"
+  local dst_dir
+
+  command -v cygpath >/dev/null 2>&1 || { log_warn "cygpath ausente — pulando config do Nushell"; return 0; }
+  dst_dir="$(cygpath -u "${APPDATA:-}")/nushell"
+  if [[ ! -d "$dst_dir" ]]; then
+    log_dim "Nushell não instalado (ou nunca aberto) — pulando config.nu"
+    return 0
+  fi
+
+  backup_and_link "$src" "$dst_dir/config.nu"
 }
 
 # install_windows_terminal_settings — a fonte do Windows Terminal mora só no

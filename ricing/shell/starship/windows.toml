@@ -1,5 +1,10 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
+# Sem a linha em branco antes do prompt (default do starship): ela aparecia
+# como vao depois do fastfetch, e nenhum ajuste no fastfetch resolvia porque
+# a linha e do prompt, nao da saida dele.
+add_newline = false
+
 command_timeout = 500
 scan_timeout = 10
 
