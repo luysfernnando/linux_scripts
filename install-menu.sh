@@ -223,13 +223,33 @@ FASTFETCH_LOGO_ROWS=16
 # linha abaixo do título, então ocupa padding + altura.
 FASTFETCH_LOGO_PADDING_TOP=1
 
-# write_fastfetch_configs tipo path largura altura backup — gera os dois .jsonc.
+# Linhas somadas à altura medida. Fica em 0: o fastfetch preenche com linhas
+# vazias até a altura do logo, então imagem mais alta que o texto vira vão em
+# branco até o prompt — não dá pra crescer a imagem sem crescer o texto junto.
+# O cursor-up do wrapper de shell não compra essa linha: ele recupera a linha
+# que o fastfetch emite depois do bloco, que existe de qualquer jeito.
+FASTFETCH_LOGO_ROWS_OFFSET=0
+
+# strip_trailing_break arquivo — apaga o último `"break",` do config.
+#
+# `break` cujo grupo seguinte não imprime nada (battery/poweradapter num
+# desktop) deixa uma linha vazia que só empurra o prompt pra baixo. O fastfetch
+# não tem separador condicional, então quem tira é o install, por máquina.
+strip_trailing_break() {
+  local file="$1" line
+  line="$(grep -n '^ *"break",$' "$file" | tail -1 | cut -d: -f1)"
+  [[ -n "$line" ]] || return 1
+  sed -i "${line}d" "$file"
+}
+
+# write_fastfetch_configs tipo path largura altura backup breaks — gera os dois
+# .jsonc. `breaks` = quantos `break` finais tirar do perfil enxuto.
 #
 # `backup` só na primeira escrita: render_fastfetch_config escreve duas vezes, e
 # sem isso a segunda faria backup do arquivo que a primeira acabou de gerar.
 write_fastfetch_configs() {
-  local logo_type="$1" logo_path="$2" logo_w="$3" logo_h="$4" backup="$5"
-  local dst_dir="$HOME/.config/fastfetch" name tmpl dst
+  local logo_type="$1" logo_path="$2" logo_w="$3" logo_h="$4" backup="$5" breaks="${6:-0}"
+  local dst_dir="$HOME/.config/fastfetch" name tmpl dst i
 
   mkdir -p "$dst_dir"
   for name in config full; do
@@ -247,18 +267,32 @@ write_fastfetch_configs() {
       -e "s/@LOGO_H@/$logo_h/" \
       -e "s/@OS_ICON@/$(fastfetch_os_icon)/" \
       "$tmpl" > "$dst"
+
+    if [[ "$name" == "config" ]]; then
+      for ((i = 0; i < breaks; i++)); do
+        strip_trailing_break "$dst" || break
+      done
+    fi
   done
 }
 
-# count_fastfetch_lines — quantas linhas o perfil enxuto imprime NESTA máquina.
+# count_fastfetch_lines — até que linha o perfil enxuto tem conteúdo NESTA
+# máquina.
 #
-# Não dá pra deduzir do template: módulo que não encontra nada (DE num Windows,
-# battery/poweradapter num desktop) não imprime linha nenhuma, e é justamente
-# essa diferença que virava vão em branco entre a imagem e o prompt.
+# Não dá pra deduzir do template por dois motivos. Módulo que não encontra nada
+# (DE num Windows, battery/poweradapter num desktop) não imprime linha nenhuma.
+# E o `break` que vinha antes deles imprime uma linha vazia que ninguém vê —
+# contar essa linha deixava a imagem uma linha mais alta que o texto visível,
+# que era o vão que sobrava até o prompt. Daí procurar a última linha com
+# conteúdo em vez de contar linhas, e devolver também quantas vazias sobraram
+# no fim, que é o que strip_trailing_break tira.
+#
+# Ecoa `<última linha com conteúdo> <linhas vazias no fim>`.
 count_fastfetch_lines() {
   local cfg="$HOME/.config/fastfetch/config.jsonc"
   is_windows && cfg="$(cygpath -m "$cfg")"
-  fastfetch --config "$cfg" --logo none 2>/dev/null | wc -l
+  fastfetch --config "$cfg" --logo none 2>/dev/null |
+    awk '{ gsub(/\033\[[0-9;?]*[a-zA-Z]/, ""); if (length($0)) n = NR } END { print n + 0, NR - n }'
 }
 
 # render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/{config,full}.jsonc
@@ -271,7 +305,7 @@ count_fastfetch_lines() {
 # São dois perfis: `config` é o de todo dia, `full` tem tudo e sai no
 # `fastfetch --full` (ver fastfetch_wrapper_* nos configs de shell).
 render_fastfetch_config() {
-  local logo_type logo_path png rows pass logo_w logo_h
+  local logo_type logo_path png rows pass logo_w logo_h breaks=0
   logo_type="$(fastfetch_logo_type)"
   png="$HOME/.config/fastfetch/images/$FASTFETCH_LOGO_IMG"
   rows="$FASTFETCH_LOGO_ROWS"
@@ -303,17 +337,25 @@ render_fastfetch_config() {
     # escapar backslash dentro do JSON.
     is_windows && logo_path="$(cygpath -m "$logo_path")"
     write_fastfetch_configs "$logo_type" "$logo_path" "$logo_w" "$logo_h" \
-      "$([[ $pass -eq 1 ]] && echo yes || echo no)"
+      "$([[ $pass -eq 1 ]] && echo yes || echo no)" "$breaks"
 
     [[ $pass -eq 2 ]] && break
 
-    local lines target
-    lines="$(count_fastfetch_lines)"
-    target=$((lines - FASTFETCH_LOGO_PADDING_TOP))
+    # Tira os `break` finais que não separam nada nesta máquina, um por vez, até
+    # não sobrar linha vazia no fim.
+    local lines tail target
+    read -r lines tail < <(count_fastfetch_lines)
+    while [[ "$tail" -gt 0 ]] && strip_trailing_break "$HOME/.config/fastfetch/config.jsonc"; do
+      breaks=$((breaks + 1))
+      read -r lines tail < <(count_fastfetch_lines)
+    done
+    [[ $breaks -gt 0 ]] && log_dim "$breaks separador(es) final(is) sem grupo depois — removido(s)"
+
+    target=$((lines - FASTFETCH_LOGO_PADDING_TOP + FASTFETCH_LOGO_ROWS_OFFSET))
     if [[ "$lines" -gt "$FASTFETCH_LOGO_PADDING_TOP" && "$target" -ne "$rows" ]]; then
       log_dim "módulos imprimem $lines linhas aqui — ajustando logo de $rows pra $target"
       rows="$target"
-    else
+    elif [[ $breaks -eq 0 ]]; then
       break # já casa, ou a medição falhou: fica no palpite
     fi
   done
