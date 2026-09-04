@@ -19,11 +19,10 @@
 	autoSetupRemote = true
 [init]
 	defaultBranch = main
-[credential "https://github.com"]
-	helper = 
-	helper = !/usr/bin/gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = 
-	helper = !/usr/bin/gh auth git-credential
+# `gh` sem path absoluto: resolve via PATH em qualquer SO. `gh auth setup-git`
+# escreve /usr/bin/gh hardcoded, que no Windows falha em todo push
+# ("/usr/bin/gh: No such file or directory"). Sem os `helper =` vazios que ele
+# também escreve, o helper nativo do gitconfig do sistema (`manager` no
+# Windows) fica como fallback pra quando o gh não estiver instalado.
 [credential]
 	helper = !gh auth git-credential
