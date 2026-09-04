@@ -4,12 +4,22 @@
 # antigo (oh-my-posh) que precisa sair antes do starship entrar.
 
 _SHELL_TOOLS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STARSHIP_THEME_SRC="$_SHELL_TOOLS_LIB_DIR/../starship/linux.toml"
 
-# check_starship olha binário E tema — sem o tema o prompt cai pro padrão
-# do starship (preset genérico), não no nosso.
+# is_windows() + backup_and_link() — sourced (não redefinidas) porque este
+# arquivo é sourced tanto por install-menu.sh quanto por
+# ricing/shell/install.sh. Guard de idempotência: os dois já podem ter
+# sourcado link.sh antes.
+if ! declare -F backup_and_link >/dev/null 2>&1; then
+  source "$_SHELL_TOOLS_LIB_DIR/link.sh"
+fi
+
+# check_starship olha binário E tema, e exige que o tema seja SYMLINK: um
+# ~/.config/starship.toml comum é uma cópia congelada (ver a armadilha do
+# MSYS em lib/link.sh) — edição no repo nunca chega no prompt. Tratar cópia
+# como "instalado" foi exatamente o que esconde esse bug, então aqui ela
+# conta como não-instalado e a re-execução conserta.
 check_starship() {
-  command -v starship >/dev/null 2>&1 && [[ -f "$HOME/.config/starship.toml" ]]
+  command -v starship >/dev/null 2>&1 && [[ -L "$HOME/.config/starship.toml" ]]
 }
 install_starship() {
   if ! command -v starship >/dev/null 2>&1; then
@@ -28,10 +38,41 @@ install_starship() {
 
   # tema sempre por último — só symlinka depois de confirmar o binário em pé.
   # Symlink (não copy): tema é igual em toda máquina, sem valor
-  # machine-specific — diferente do config.jsonc do fastfetch.
-  mkdir -p "$HOME/.config"
-  ln -sf "$STARSHIP_THEME_SRC" "$HOME/.config/starship.toml"
-  log_ok "~/.config/starship.toml -> $STARSHIP_THEME_SRC"
+  # machine-specific — diferente do config.jsonc do fastfetch. windows.toml é
+  # separado do linux.toml (módulos de versão de linguagem desligados — drive
+  # de rede lento), então a escolha do arquivo depende do SO.
+  local theme_src="$_SHELL_TOOLS_LIB_DIR/../starship/linux.toml"
+  is_windows && theme_src="$_SHELL_TOOLS_LIB_DIR/../starship/windows.toml"
+  backup_and_link "$theme_src" "$HOME/.config/starship.toml"
+
+  is_windows && install_powershell_profile
+}
+
+# install_powershell_profile — README documentava isso como passo manual
+# (Copy-Item); aqui vira parte do fluxo automático do starship no Windows.
+# Symlink em vez de copy: perfil não tem nada machine-specific.
+install_powershell_profile() {
+  local ps_profile_src="$_SHELL_TOOLS_LIB_DIR/../powershell/Microsoft.PowerShell_profile.ps1"
+  local ps_profile_dst="$HOME/Documents/PowerShell/Microsoft.PowerShell_profile.ps1"
+  local pwsh_bin
+
+  backup_and_link "$ps_profile_src" "$ps_profile_dst"
+
+  pwsh_bin="$(command -v pwsh || true)"
+  if [[ -z "$pwsh_bin" ]]; then
+    log_warn "pwsh não encontrado — instale o módulo Terminal-Icons manualmente: Install-Module Terminal-Icons -Scope CurrentUser"
+    return 0
+  fi
+  if "$pwsh_bin" -NoProfile -Command "if (Get-Module -ListAvailable Terminal-Icons) { exit 0 } else { exit 1 }" >/dev/null 2>&1; then
+    log_ok "módulo Terminal-Icons (PowerShell)"
+  else
+    log_step "instalando módulo Terminal-Icons (PowerShell)..."
+    if "$pwsh_bin" -NoProfile -Command "Install-Module Terminal-Icons -Scope CurrentUser -Force -Repository PSGallery"; then
+      log_ok "Terminal-Icons instalado"
+    else
+      log_warn "falha instalando Terminal-Icons — instale manualmente: Install-Module Terminal-Icons -Scope CurrentUser"
+    fi
+  fi
 }
 
 # ---------------------------

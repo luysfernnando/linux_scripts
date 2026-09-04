@@ -6,7 +6,12 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-is_windows() { [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; }
+source "$REPO_DIR/ricing/shell/lib/log.sh"
+# is_windows() + backup_and_link() — sourced aqui no topo (e não depois do
+# winget) porque is_windows já é usada por need()/winget_install_if_missing.
+# backup_and_link inclui o fix e a verificação do symlink no Windows
+# (armadilha do MSYS documentada em lib/link.sh).
+source "$REPO_DIR/ricing/shell/lib/link.sh"
 
 need() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -65,30 +70,6 @@ winget_install_if_missing() {
 winget_install_if_missing gum charmbracelet.gum
 need gum
 
-source "$REPO_DIR/ricing/shell/lib/log.sh"
-
-# backup_and_link src dst — mesmo padrão de ricing/shell/install.sh: só faz
-# backup se dst existir e não for já um symlink (idempotente).
-backup_and_link() {
-  local src="$1" dst="$2"
-  if [[ -e "$dst" && ! -L "$dst" ]]; then
-    # No Windows, ln -s em diretório sem Developer Mode/terminal elevado cai
-    # pra copiar o conteúdo em vez de linkar de verdade — dst nunca vira
-    # symlink, então toda re-execução veria "conteúdo novo" aqui. Se for
-    # idêntico ao src (ou seja, é essa cópia-fallback de uma execução
-    # anterior, não dado do usuário), só substitui em vez de empilhar backup.
-    if diff -rq "$src" "$dst" >/dev/null 2>&1; then
-      rm -rf "$dst"
-    else
-      log_warn "backup: $dst -> $dst.bak"
-      rm -rf "$dst.bak"
-      mv "$dst" "$dst.bak"
-    fi
-  fi
-  mkdir -p "$(dirname "$dst")"
-  ln -sf "$src" "$dst"
-  log_ok "$dst -> $src"
-}
 
 action_dotfiles() {
   log_step "Shell (.bashrc/fish)"

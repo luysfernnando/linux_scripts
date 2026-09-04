@@ -90,7 +90,7 @@ Copy-Item ricing\terminal\rio\config.toml "$HOME\AppData\Local\rio\config.toml"
 
 Config em `shell/powershell/`. Prompt via Starship (não oh-my-posh — testado, ~900ms mais lento no boot pelo módulo de 55KB que oh-my-posh gera; Starship é ~10KB). Tema em `shell/starship/windows.toml` desliga módulos de versão de linguagem (php/node/python/etc) — cada um spawna processo verificando `composer.json`/`package.json` por pasta, lento em drive de rede. `Terminal-Icons` (módulo PowerShell Gallery) dá ícones no `ls`/`Get-ChildItem`.
 
-Restaurar:
+Automatizado via `install-menu.sh` → "starship (symlink tema)" (roda em Git Bash — `install_starship`/`install_powershell_profile` em `ricing/shell/lib/install-shell-tools.sh`): instala starship, symlinka `windows.toml`, symlinka o profile pra `$HOME\Documents\PowerShell\`, instala `Terminal-Icons` se faltar. Restaurar manual (equivalente, se preferir sem o Git Bash):
 
 ```powershell
 Copy-Item ricing\shell\starship\windows.toml "$HOME\.config\starship.toml"

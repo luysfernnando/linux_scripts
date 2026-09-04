@@ -41,9 +41,11 @@ KDE Plasma 6 + kitty + fish/starship. `ricing/README.md` tem os comandos de rest
 | GRUB | boot silencioso (sem menu/mensagens) | `ricing/grub/silent-boot.sh` | Não, script `sudo` |
 | git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/git/.gitconfig` | Sim |
 | WezTerm (Windows) | Catppuccin Mocha, WebGpu, tab bar embaixo | `ricing/terminal/wezterm/wezterm.lua` | Não, copiado |
-| PowerShell/Starship (Windows) | prompt Starship + `Terminal-Icons` | `ricing/shell/powershell/` (profile) + `ricing/shell/starship/windows.toml` (tema minimalista, drive de rede) | Não, copiado |
+| PowerShell/Starship (Windows) | prompt Starship + `Terminal-Icons` | `ricing/shell/powershell/` (profile) + `ricing/shell/starship/windows.toml` (tema minimalista, drive de rede) | Sim (profile e `~/.config/starship.toml`) |
 
 `shell/git/.gitconfig` symlinkado pro `~/.gitconfig` via `install.sh`. Assinatura de commits via SSH (`gpg.format=ssh`, chave `~/.ssh/luysfernnando_sign_commits` — path fixo em toda máquina, keypair distinto por máquina). `allowed_signers` versionado (`shell/git/allowed_signers`, symlink igual) acumula a pubkey de cada máquina — setup em `ricing/README.md`.
+
+**Symlink: sempre `backup_and_link` de `ricing/shell/lib/link.sh`, nunca `ln -s` cru** (ver gotcha). Fonte única de `is_windows()`+`backup_and_link()`, sourcada por `install-menu.sh`, `ricing/shell/install.sh`, `lib/install-shell-tools.sh`, `claude/install.sh`. Idempotente: já linkado → no-op; cópia idêntica → substitui sem backup; dado do usuário → `.bak`. Falha alto se destino não virar symlink. `check_*` de config symlinkada testa `[[ -L ]]`, não `[[ -f ]]` — com `-f` uma cópia congelada passa por "instalado".
 
 `install-menu.sh` automatiza tudo acima (shell, kitty, tema KDE, fastfetch, starship, sysup); requer `gum`. `ricing/shell/install.sh` faz o setup de shell isolado (só bash/fish — zsh saiu do repo) + instala `sysup` (baixa release do GitHub, ou `cargo build` como fallback) + symlinka `lsd/{config.yaml,colors.yaml}` (independe do shell detectado). Garante binários dos aliases e `starship` (`lsd`, `fzf`, `starship` — via `pacman`/`apt`, `ricing/shell/lib/install-cli-tools.sh` + `install-shell-tools.sh`); antes de instalar starship, detecta oh-my-posh e pergunta se quer desinstalar. `mise` (elixir/erlang/etc) ativado em `.bashrc`/`config.fish` se o binário já existir — instalação não é feita por este script. Tudo idempotente, checa antes de instalar.
 
@@ -74,9 +76,10 @@ Layout por módulo (workspace Cargo: `sysup/cli`/`sysup/worker`/`sysup/ipc`), re
 | Problema | Causa | Fix |
 |---|---|---|
 | Ctrl+V não cola imagem no Claude Code (kitty+Wayland+KDE) | `wl-clipboard` ausente, ou kitty remapeando Ctrl+V, ou Spectacle copiando path em vez de imagem | `sudo pacman -S wl-clipboard`; comentar `map ctrl+v paste_from_clipboard` no `kitty.conf`; atalho global KDE rodando `spectacle -b -r -n -c` direto (ignora config do GUI). Diagnóstico: `wl-paste --list-types` deve listar `image/png` |
+| **Editar config no repo não muda nada na máquina (Windows)** | `~/.config/<x>` é **cópia**, não symlink: no Git Bash/MSYS2 `ln -s` copia o arquivo e sai com status 0 quando `MSYS=winsymlinks:*` não está setado — sucesso silencioso, log diz "dst -> src", dst fica snapshot congelado | Sempre `backup_and_link` de `ricing/shell/lib/link.sh` (nunca `ln -s` cru): seta `nativestrict`, cai pro `New-Item -ItemType SymbolicLink` do PowerShell, e **verifica com `[[ -L ]]`** depois. Diagnóstico: `ls -la ~/.config/starship.toml` — se não tem `->`, é cópia. Symlink no Windows exige Modo de Desenvolvedor ligado ou terminal admin |
 
 **kitty.conf bindings custom:** `ctrl+shift+t` = nova aba no cwd; `ctrl+v` (paste) comentado — não reativar sem ler gotcha acima; Ctrl+C/Ctrl+Shift+C invertidos (copiar = Ctrl+C, SIGINT = Ctrl+Shift+C).
 
 ## Adding New Scripts
 
-Subdiretório por categoria. `need()` guard + `set -euo pipefail` no topo.
+Subdiretório por categoria. `need()` guard + `set -euo pipefail` no topo. Precisa symlinkar? `source ricing/shell/lib/link.sh` e use `backup_and_link` — não escreva `ln -s`.

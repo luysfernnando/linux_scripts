@@ -4,6 +4,11 @@ set -euo pipefail
 CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../ricing/shell/lib/log.sh
 source "$CLAUDE_DIR/../ricing/shell/lib/log.sh"
+# is_windows() + backup_and_link() — este script também roda em Git Bash, onde
+# `ln -s` cru copia em vez de linkar (armadilha do MSYS documentada em
+# lib/link.sh).
+# shellcheck source=../ricing/shell/lib/link.sh
+source "$CLAUDE_DIR/../ricing/shell/lib/link.sh"
 
 # mirror_dir src dst — replica src/ em dst/, removendo o que não existe mais
 # em src (equivalente ao uso de `rsync -a --delete` abaixo). Usa rsync quando
@@ -41,31 +46,11 @@ AGENT_RULE_DIRS=(
 
 link_skill_into_agent() {
   local name="$1" agent_dir="$2"
-  local src="$AGENTS_SKILLS_DIR/$name"
-  local dst="$agent_dir/$name"
-
   mkdir -p "$agent_dir"
-
-  if [[ -e "$dst" && ! -L "$dst" ]]; then
-    log_warn "backup: $dst -> $dst.bak"
-    mv "$dst" "$dst.bak"
-  fi
-
-  ln -sfn "$src" "$dst"
-  log_dim "$dst -> $src"
+  backup_and_link "$AGENTS_SKILLS_DIR/$name" "$agent_dir/$name"
 }
 
-link_file() {
-  local src="$1" dst="$2"
-
-  if [[ -e "$dst" && ! -L "$dst" ]]; then
-    log_warn "backup: $dst -> $dst.bak"
-    mv "$dst" "$dst.bak"
-  fi
-
-  ln -sfn "$src" "$dst"
-  log_dim "$dst -> $src"
-}
+link_file() { backup_and_link "$1" "$2"; }
 
 mkdir -p "$AGENTS_SKILLS_DIR"
 

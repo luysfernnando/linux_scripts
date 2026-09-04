@@ -5,27 +5,15 @@ SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SHELL_DIR/../.." && pwd)"
 
 source "$SHELL_DIR/lib/log.sh"
+# is_windows() + backup_and_link() (que verifica que o symlink virou symlink
+# mesmo — ver a armadilha do MSYS documentada em lib/link.sh).
+source "$SHELL_DIR/lib/link.sh"
 
 need() {
   command -v "$1" >/dev/null 2>&1 || {
     log_warn "faltando: $1 — pulando passo que depende dele."
     return 1
   }
-}
-
-# backup_and_link src dst — faz backup pra dst.bak se dst existir e não for
-# já um symlink (idempotente), depois symlinka src -> dst.
-backup_and_link() {
-  local src="$1" dst="$2"
-
-  if [[ -e "$dst" && ! -L "$dst" ]]; then
-    log_warn "backup: $dst -> $dst.bak"
-    mv "$dst" "$dst.bak"
-  fi
-
-  mkdir -p "$(dirname "$dst")"
-  ln -sf "$src" "$dst"
-  log_ok "$dst -> $src"
 }
 
 backup_and_link "$SHELL_DIR/git/.gitconfig" "$HOME/.gitconfig"
