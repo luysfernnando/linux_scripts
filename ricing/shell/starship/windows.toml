@@ -1,39 +1,98 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
 command_timeout = 500
 scan_timeout = 10
-format = """$directory$git_branch$git_status
-$character"""
+
+format = """
+[](color_orange)\
+$os\
+$username\
+[](bg:color_yellow fg:color_orange)\
+$directory\
+[](fg:color_yellow bg:color_aqua)\
+$git_branch\
+$git_status\
+[](fg:color_aqua bg:color_bg1)\
+$time\
+[ ](fg:color_bg1)\
+$line_break$character"""
+
+palette = 'gruvbox_dark'
+
+# Degradê roxo -> azul igual ao linux.toml/fastfetch.
+[palettes.gruvbox_dark]
+color_fg0 = '#1d2021'
+color_bg1 = '#64d2ff'
+color_bg3 = '#76baff'
+color_blue = '#88a2ff'
+color_aqua = '#9a8aff'
+color_green = '#98971a'
+color_orange = '#be5aff'
+color_purple = '#b16286'
+color_red = '#cc241d'
+color_yellow = '#ac72ff'
+
+[os]
+disabled = false
+style = "bg:color_orange fg:color_fg0"
+
+[os.symbols]
+Windows = "󰍲"
+
+[username]
+show_always = true
+style_user = "bg:color_orange fg:color_fg0"
+style_root = "bg:color_orange fg:color_fg0"
+format = '[ $user ]($style)'
 
 [directory]
+style = "fg:color_fg0 bg:color_yellow"
+format = "[ $path ]($style)"
 truncation_length = 3
-style = "bold cyan"
-format = "[ $path]($style)[ ❯ ](bold white)"
+truncation_symbol = "…/"
 read_only = " 󰌾"
 
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = "󰝚 "
+"Pictures" = " "
+"Developer" = "󰲋 "
+
 [git_branch]
-style = "bold yellow"
-format = "[$symbol $branch]($style)[ ](bold white)"
-symbol = ""
+symbol = ""
+style = "bg:color_aqua"
+format = '[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)'
 
 [git_status]
-style = "bold red"
-format = '([$all_status$ahead_behind]($style) )'
-conflicted = "󰞇 ${count} "
-ahead = "⇡${count} "
-behind = "⇣${count} "
-diverged = "⇕⇡${ahead_count}⇣${behind_count} "
-untracked = " ${count} "
-stashed = "󰆓${count} "
-modified = " ${count} "
-staged = " ${count} "
-renamed = "»${count} "
-deleted = "✘${count} "
+style = "bg:color_aqua"
+format = '[[($modified$untracked$staged$deleted$renamed )](fg:color_fg0 bg:color_aqua)]($style)'
+modified = "${count} "
+untracked = "${count} "
+staged = "${count} "
+deleted = "${count} "
+renamed = "${count} "
+
+[time]
+disabled = false
+time_format = "%R"
+style = "bg:color_bg1"
+format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
+
+[line_break]
+disabled = false
 
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
+disabled = false
+success_symbol = '[❯](bold fg:color_bg1)'
+error_symbol = '[❯](bold fg:color_red)'
+vimcmd_symbol = '[❮](bold fg:color_green)'
+vimcmd_replace_one_symbol = '[❮](bold fg:color_purple)'
+vimcmd_replace_symbol = '[❮](bold fg:color_purple)'
+vimcmd_visual_symbol = '[❮](bold fg:color_yellow)'
 
-# módulos de versão de linguagem desligados (spawn de processo por pasta,
-# lento em drive de rede tipo L:\)
+# Módulos de versão de linguagem/runtime desligados: spawn de processo por
+# pasta é lento em drive de rede tipo L:\.
 [php]
 disabled = true
 [nodejs]
@@ -48,15 +107,23 @@ disabled = true
 disabled = true
 [rust]
 disabled = true
+[c]
+disabled = true
+[cpp]
+disabled = true
+[kotlin]
+disabled = true
+[haskell]
+disabled = true
 [dotnet]
 disabled = true
 [docker_context]
 disabled = true
+[conda]
+disabled = true
+[pixi]
+disabled = true
 [package]
 disabled = true
 [cmd_duration]
-disabled = true
-[username]
-disabled = true
-[hostname]
 disabled = true
