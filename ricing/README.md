@@ -118,31 +118,38 @@ Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser
 
 Config em `fastfetch/config.jsonc.tmpl`. Logo `images/165.png`, módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
 
-Protocolo de imagem do logo (`logo.type`) varia por terminal — kitty/WezTerm usam `kitty`, Windows Terminal (WSL) usa `sixel` (precisa de `imagemagick` instalado pra decodificar; `fastfetch --show-errors` mostra o erro real se a imagem não aparecer). Por isso `config.jsonc` **não é symlink**: `config.jsonc.tmpl` fica no repo com o placeholder `@LOGO_TYPE@`, e `install-menu.sh` (ação "fastfetch") gera o arquivo real em `~/.config/fastfetch/config.jsonc` substituindo pelo valor certo pra cada máquina — symlinkar geraria diff de git toda vez que WSL e nativo divergissem.
+### Por que `config.jsonc` não é symlink
 
-Restaurar:
+Quatro valores variam por máquina — protocolo de imagem, path absoluto do logo, largura e altura em células. Então o repo guarda só `config.jsonc.tmpl`, com os placeholders `@LOGO_TYPE@`, `@LOGO_PATH@`, `@LOGO_W@` e `@LOGO_H@`, e `install-menu.sh` (ação "fastfetch") gera o arquivo real em `~/.config/fastfetch/config.jsonc`. Symlinkar geraria diff de git a cada troca de máquina.
+
+| Plataforma | `logo.type` | `logo.source` |
+|---|---|---|
+| kitty nativo | `kitty` | `images/165.png` |
+| WSL | `sixel` | `images/165.png` |
+| Windows (Terminal e WezTerm) | `raw` | `165.sixel`, pré-convertido pelo `magick` no install |
+
+`fastfetch --show-errors` mostra o erro real quando a imagem não aparece.
+
+### Windows: por que `raw` e não `sixel`
+
+O `--logo-type sixel` do fastfetch não funciona no Windows nativo: ele carrega o ImageMagick pedindo `libMagickCore-7.Q16HDRI-10.dll` (naming do MSYS2, ABI do 7.1.1) e o instalador oficial entrega `CORE_RL_MagickCore_.dll` do 7.1.2. Renomear tira o `Image Magick library not found`, mas cai em `Failed to load / convert the image source`, porque a ABI difere. Montar as DLLs mingw da versão certa também não resolve (as libs atuais não são contemporâneas do 7.1.1 — dá `WinError 127`).
+
+A saída é converter fora do fastfetch: `render_sixel_logo` no `install-menu.sh` chama o `magick.exe` (esse funciona) pra gerar `~/.config/fastfetch/165.sixel`, e o `logo.type` fica `raw`, que despeja o arquivo byte a byte. Como o WezTerm também renderiza sixel, `raw` cobre os dois terminais.
+
+Duas armadilhas:
+
+- **`file-raw` não serve** — trata o arquivo como linhas de texto e injeta escapes no meio do blob DCS, embaralhando a tela em listras. Tem que ser `raw`.
+- **`width`/`height` são só reserva de espaço** — `raw` não sabe o tamanho do blob. Se não casarem com o sixel, o texto sobrepõe a imagem. O install calcula a largura pelo aspect ratio real (`magick identify`) e pela célula do terminal (`FASTFETCH_CELL_PX_W`/`_H`, ≈9x18 pra JetBrainsMono NFM 11pt).
+
+### Restaurar
 
 ```bash
-mkdir -p ~/.config/fastfetch
-sed "s/@LOGO_TYPE@/kitty/" ricing/fastfetch/config.jsonc.tmpl > ~/.config/fastfetch/config.jsonc  # ou "sixel" no WSL
-ln -s "$(pwd)/ricing/fastfetch/images" ~/.config/fastfetch/images
-ln -s "$(pwd)/ricing/fastfetch/presets" ~/.config/fastfetch/presets
+./install-menu.sh   # "fastfetch (config gerado + symlink)" — detecta a plataforma sozinho
 ```
 
-Ou simplesmente `./install-menu.sh` → "fastfetch (config gerado + symlink)", que já detecta WSL sozinho.
+No Windows precisa do ImageMagick antes: `winget install ImageMagick.ImageMagick`. O install acha o `magick.exe` no `Program Files` mesmo sem ele estar no PATH do Git Bash.
 
-Restaurar (Windows, copiar — `config.jsonc` tem path do logo hardcoded pra máquina Linux, `/home/lulfex/...`; ajustar `logo.source` na cópia local depois, não editar o do repo):
-
-```powershell
-winget install Fastfetch-cli.Fastfetch
-mkdir -p ~/.config/fastfetch
-Copy-Item ricing\fastfetch\config.jsonc "$HOME\.config\fastfetch\config.jsonc"
-Copy-Item -Recurse ricing\fastfetch\images "$HOME\.config\fastfetch\images"
-Copy-Item -Recurse ricing\fastfetch\presets "$HOME\.config\fastfetch\presets"
-# editar "logo.source" no config.jsonc copiado pro path Windows de images/165.png
-```
-
-WezTerm (build 2024-02) não renderiza direito o placeholder unicode do protocolo `kitty` (aparece `⸮` no lugar da imagem). Trocar `"logo.type"` de `"kitty"` pra `"iterm"` na cópia local resolve — WezTerm suporta protocolo iTerm2 nativamente, sem placeholder unicode. Também remover módulo `disk` na cópia local se quiser esconder discos (múltiplos drives montados no Windows poluem a saída).
+WezTerm (build 2024-02) não renderiza o placeholder unicode do protocolo `kitty` (aparece `⸮` no lugar da imagem) — daí o Linux usar `kitty` só em kitty nativo. Remover o módulo `disk` se quiser esconder discos (vários drives montados no Windows poluem a saída).
 
 ## Prompt (oh-my-posh)
 
