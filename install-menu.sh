@@ -214,60 +214,110 @@ FASTFETCH_CELL_PX_H=20
 # altura) é recalculado.
 FASTFETCH_LOGO_IMG=165.png
 
-# Altura do logo em linhas do terminal — é o tamanho da imagem. Manter próximo
-# do número de linhas que os módulos imprimem, senão sobra vão em branco entre
-# a última linha e o prompt (a imagem é mais alta que o texto).
-FASTFETCH_LOGO_ROWS=18
+# Altura do logo em linhas do terminal — é o tamanho da imagem. Só um palpite
+# inicial: render_fastfetch_config mede quantas linhas os módulos realmente
+# imprimem nesta máquina e reajusta. Serve de fallback se a medição falhar.
+FASTFETCH_LOGO_ROWS=16
 
-# render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/config.jsonc
-# a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo e
+# `logo.padding.top` do template. Entra na conta da altura: a imagem começa uma
+# linha abaixo do título, então ocupa padding + altura.
+FASTFETCH_LOGO_PADDING_TOP=1
+
+# write_fastfetch_configs tipo path largura altura backup — gera os dois .jsonc.
+#
+# `backup` só na primeira escrita: render_fastfetch_config escreve duas vezes, e
+# sem isso a segunda faria backup do arquivo que a primeira acabou de gerar.
+write_fastfetch_configs() {
+  local logo_type="$1" logo_path="$2" logo_w="$3" logo_h="$4" backup="$5"
+  local dst_dir="$HOME/.config/fastfetch" name tmpl dst
+
+  mkdir -p "$dst_dir"
+  for name in config full; do
+    tmpl="$REPO_DIR/ricing/fastfetch/$name.jsonc.tmpl"
+    dst="$dst_dir/$name.jsonc"
+    if [[ "$backup" == "yes" && -e "$dst" && ! -L "$dst" ]]; then
+      log_warn "backup: $dst -> $dst.bak"
+      mv "$dst" "$dst.bak"
+    fi
+    rm -f "$dst" # se ainda for symlink de uma instalação antiga, troca por arquivo real
+
+    sed -e "s/@LOGO_TYPE@/$logo_type/" \
+      -e "s|@LOGO_PATH@|$logo_path|" \
+      -e "s/@LOGO_W@/$logo_w/" \
+      -e "s/@LOGO_H@/$logo_h/" \
+      -e "s/@OS_ICON@/$(fastfetch_os_icon)/" \
+      "$tmpl" > "$dst"
+  done
+}
+
+# count_fastfetch_lines — quantas linhas o perfil enxuto imprime NESTA máquina.
+#
+# Não dá pra deduzir do template: módulo que não encontra nada (DE num Windows,
+# battery/poweradapter num desktop) não imprime linha nenhuma, e é justamente
+# essa diferença que virava vão em branco entre a imagem e o prompt.
+count_fastfetch_lines() {
+  local cfg="$HOME/.config/fastfetch/config.jsonc"
+  is_windows && cfg="$(cygpath -m "$cfg")"
+  fastfetch --config "$cfg" --logo none 2>/dev/null | wc -l
+}
+
+# render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/{config,full}.jsonc
+# a partir dos templates do repo, substituindo @LOGO_TYPE@ pelo protocolo certo e
 # @LOGO_PATH@ pelo path absoluto do logo nessa máquina (no Windows o
 # fastfetch.exe não entende o path POSIX do Git Bash). É um COPY de propósito,
 # não symlink: os dois valores variam por máquina, então symlinkar geraria diff
 # no git toda vez que WSL != nativo.
+#
+# São dois perfis: `config` é o de todo dia, `full` tem tudo e sai no
+# `fastfetch --full` (ver fastfetch_wrapper_* nos configs de shell).
 render_fastfetch_config() {
-  local tmpl="$REPO_DIR/ricing/fastfetch/config.jsonc.tmpl" dst="$HOME/.config/fastfetch/config.jsonc"
-  local logo_type logo_path png sixel logo_w logo_h
+  local logo_type logo_path png rows pass logo_w logo_h
   logo_type="$(fastfetch_logo_type)"
   png="$HOME/.config/fastfetch/images/$FASTFETCH_LOGO_IMG"
-  logo_path="$png"
-  logo_w=40
-  logo_h="$FASTFETCH_LOGO_ROWS"
+  rows="$FASTFETCH_LOGO_ROWS"
 
-  if [[ "$logo_type" == "raw" ]]; then
-    local px_w px_h
-    if read -r sixel px_w px_h < <(render_sixel_logo "$png" "$logo_h") && [[ -n "$px_h" ]]; then
-      logo_path="$sixel"
-      # Reserva em células arredondada pra cima a partir das dimensões que o
-      # chafa gravou no header — arredondar pra baixo deixaria o texto ou o
-      # prompt por cima da última faixa da imagem.
-      logo_w=$(((px_w + FASTFETCH_CELL_PX_W - 1) / FASTFETCH_CELL_PX_W))
-      logo_h=$(((px_h + FASTFETCH_CELL_PX_H - 1) / FASTFETCH_CELL_PX_H))
-    else
-      log_warn "chafa não encontrado — sem ele não dá pra converter o logo pra sixel"
-      log_dim "instale com: winget install hpjansson.Chafa"
-      logo_type=builtin
+  # Duas passadas: a primeira só pra existir um config que o fastfetch aceite,
+  # a segunda com a altura medida. Sem a primeira não há o que medir.
+  for pass in 1 2; do
+    local sixel px_w px_h
+    logo_w=40
+    logo_h="$rows"
+    logo_path="$png"
+
+    if [[ "$logo_type" == "raw" ]]; then
+      if read -r sixel px_w px_h < <(render_sixel_logo "$png" "$rows") && [[ -n "$px_h" ]]; then
+        logo_path="$sixel"
+        # Reserva em células arredondada pra cima a partir das dimensões que o
+        # chafa gravou no header — arredondar pra baixo deixaria o texto ou o
+        # prompt por cima da última faixa da imagem.
+        logo_w=$(((px_w + FASTFETCH_CELL_PX_W - 1) / FASTFETCH_CELL_PX_W))
+        logo_h=$(((px_h + FASTFETCH_CELL_PX_H - 1) / FASTFETCH_CELL_PX_H))
+      else
+        log_warn "chafa não encontrado — sem ele não dá pra converter o logo pra sixel"
+        log_dim "instale com: winget install hpjansson.Chafa"
+        logo_type=builtin
+      fi
     fi
-  fi
 
-  # Forward slash mesmo no Windows: o fastfetch aceita, e evita ter que escapar
-  # backslash dentro do JSON.
-  is_windows && logo_path="$(cygpath -m "$logo_path")"
+    # Forward slash mesmo no Windows: o fastfetch aceita, e evita ter que
+    # escapar backslash dentro do JSON.
+    is_windows && logo_path="$(cygpath -m "$logo_path")"
+    write_fastfetch_configs "$logo_type" "$logo_path" "$logo_w" "$logo_h" \
+      "$([[ $pass -eq 1 ]] && echo yes || echo no)"
 
-  mkdir -p "$(dirname "$dst")"
-  if [[ -e "$dst" && ! -L "$dst" ]]; then
-    log_warn "backup: $dst -> $dst.bak"
-    mv "$dst" "$dst.bak"
-  fi
-  rm -f "$dst" # se ainda for symlink de uma instalação antiga, troca por arquivo real
+    [[ $pass -eq 2 ]] && break
 
-  sed -e "s/@LOGO_TYPE@/$logo_type/" \
-    -e "s|@LOGO_PATH@|$logo_path|" \
-    -e "s/@LOGO_W@/$logo_w/" \
-    -e "s/@LOGO_H@/$logo_h/" \
-    -e "s/@OS_ICON@/$(fastfetch_os_icon)/" \
-    "$tmpl" > "$dst"
-  log_ok "$dst (logo.type=$logo_type, logo=$logo_path, ${logo_w}x${logo_h})"
+    local lines target
+    lines="$(count_fastfetch_lines)"
+    target=$((lines - FASTFETCH_LOGO_PADDING_TOP))
+    if [[ "$lines" -gt "$FASTFETCH_LOGO_PADDING_TOP" && "$target" -ne "$rows" ]]; then
+      log_dim "módulos imprimem $lines linhas aqui — ajustando logo de $rows pra $target"
+      rows="$target"
+    else
+      break # já casa, ou a medição falhou: fica no palpite
+    fi
+  done
+  log_ok "~/.config/fastfetch/{config,full}.jsonc (logo.type=$logo_type, ${logo_w}x${logo_h})"
 
   if [[ "$logo_type" == "sixel" ]] && ! command -v magick >/dev/null 2>&1 && ! command -v convert >/dev/null 2>&1; then
     log_warn "sixel precisa de imagemagick pra decodificar a imagem — sem ele o logo não aparece"

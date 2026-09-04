@@ -153,6 +153,24 @@ alias search 'pacman -Ss'
 alias info 'pacman -Si'
 
 # ---------------------------
+# FASTFETCH
+# ---------------------------
+# `fastfetch --full` mostra tudo (host, board, bios, disco, som, IP...); sem
+# argumento mostra o perfil enxuto. `--full` não é flag do fastfetch, é atalho
+# pro segundo config gerado pelo install-menu.sh.
+function fastfetch
+    set -l args
+    for a in $argv
+        if test "$a" = --full
+            set -a args --config full
+        else
+            set -a args $a
+        end
+    end
+    command fastfetch $args
+end
+
+# ---------------------------
 # NGROK / CLOUDFLARE TUNNEL
 # ---------------------------
 alias ngrok.start 'ngrok http 4000 --url https://candeia.ngrok.app'

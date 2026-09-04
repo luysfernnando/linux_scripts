@@ -1,0 +1,61 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "logo": {
+    "source": "@LOGO_PATH@",
+    "type": "@LOGO_TYPE@",
+    "width": @LOGO_W@,
+    "height": @LOGO_H@,
+    "padding": {
+      "top": 1
+    }
+  },
+  "display": {
+    "color": {
+      "title": "1;38;2;100;210;255"
+    },
+    "percent": {
+      "color": {
+        "green": "1;38;2;100;210;255",
+        "yellow": "1;38;2;190;90;255",
+        "red": "1;38;2;255;60;120"
+      }
+    },
+    "key": {
+      "type": "string"
+    }
+  },
+  "modules": [
+    "title",
+    "separator",
+    { "type": "os", "key": "@OS_ICON@ OS", "keyColor": "1;38;2;100;210;255" },
+    { "type": "host", "key": "󰪫 Host", "keyColor": "1;38;2;103;205;255" },
+    { "type": "board", "key": "󰚗 Board", "keyColor": "1;38;2;107;201;255" },
+    { "type": "bios", "key": "󰒓 BIOS", "keyColor": "1;38;2;110;196;255" },
+    { "type": "kernel", "key": "󰘚 Kernel", "keyColor": "1;38;2;114;192;255" },
+    { "type": "uptime", "key": "󰅐 Uptime", "keyColor": "1;38;2;117;187;255" },
+    { "type": "packages", "key": "󰏖 Packages", "keyColor": "1;38;2;121;182;255" },
+    "break",
+    { "type": "shell", "key": "󰆍 Shell", "keyColor": "1;38;2;124;178;255" },
+    { "type": "terminal", "key": "󰞷 Terminal", "keyColor": "1;38;2;128;173;255" },
+    { "type": "terminalfont", "key": "󰛖 Font", "keyColor": "1;38;2;131;168;255" },
+    { "type": "de", "key": "󰇅 DE", "keyColor": "1;38;2;135;164;255" },
+    { "type": "wm", "key": "󰖲 WM", "keyColor": "1;38;2;138;159;255" },
+    { "type": "theme", "key": "󰏘 Theme", "keyColor": "1;38;2;142;155;255" },
+    { "type": "icons", "key": "󰋩 Icons", "keyColor": "1;38;2;145;150;255" },
+    { "type": "cursor", "key": "󰇀 Cursor", "keyColor": "1;38;2;148;145;255" },
+    "break",
+    { "type": "cpu", "key": "󰻠 CPU", "format": "{name}", "keyColor": "1;38;2;152;141;255" },
+    { "type": "gpu", "key": "󰢮 GPU", "format": "{name}", "keyColor": "1;38;2;155;136;255" },
+    { "type": "display", "key": "󰍹 Display", "keyColor": "1;38;2;159;132;255" },
+    { "type": "memory", "key": "󰍛 Memory", "keyColor": "1;38;2;162;127;255" },
+    { "type": "swap", "key": "󰓡 Swap", "keyColor": "1;38;2;166;122;255" },
+    { "type": "disk", "key": "󰋊 Disk", "keyColor": "1;38;2;169;118;255" },
+    { "type": "sound", "key": "󰕾 Sound", "keyColor": "1;38;2;173;113;255" },
+    "break",
+    { "type": "localip", "key": "󰩠 Local IP", "keyColor": "1;38;2;176;108;255" },
+    { "type": "locale", "key": "󰗊 Locale", "keyColor": "1;38;2;180;104;255" },
+    { "type": "users", "key": "󰀄 Users", "keyColor": "1;38;2;183;99;255" },
+    { "type": "battery", "key": "󱊢 Battery", "keyColor": "1;38;2;187;95;255" },
+    { "type": "poweradapter", "key": "󰚥 Power Adapter", "keyColor": "1;38;2;190;90;255" }
+  ]
+}

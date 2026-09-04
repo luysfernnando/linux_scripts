@@ -118,11 +118,24 @@ Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser
 
 ## fastfetch
 
-Config em `fastfetch/config.jsonc.tmpl`. Logo `images/165.png`, módulos agrupados em seções (`break` entre elas): sistema → shell/terminal → ambiente gráfico (DE/WM/tema) → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
+Dois perfis, ambos com o mesmo logo (`images/165.png`) e as mesmas seções (`break` entre elas): sistema → shell/terminal/ambiente gráfico → hardware → rede/energia. `images/` (250 PNGs) e `presets/` (jsonc) vêm de https://github.com/Maheswara660/fastfetch.
+
+| Comando | Template | Conteúdo |
+|---|---|---|
+| `fastfetch` | `fastfetch/config.jsonc.tmpl` | Enxuto — 16 linhas, mesma altura do logo |
+| `fastfetch --full` | `fastfetch/full.jsonc.tmpl` | Tudo: separador, host, board, BIOS, fonte do terminal, ícones, cursor, display, disco, som, IP local, locale, usuários |
+
+`--full` não é flag do fastfetch: é atalho de uma função de shell (`bash/.bashrc`, `fish/config.fish`, `powershell/Microsoft.PowerShell_profile.ps1`) que troca por `--config full`. Qualquer outro argumento passa direto pro binário.
+
+Os ícones das chaves são fixos no template e todos do set Material Design (`nf-md-*`), pra ficarem do mesmo tamanho visual — ver a seção do Windows Terminal sobre `NF` vs `NFM`. O único que varia por plataforma é o de SO, via placeholder `@OS_ICON@`. Por isso `display.key.type` é `"string"` e não `"both"`: com `"both"` o fastfetch prefixaria o ícone dele.
 
 ### Por que `config.jsonc` não é symlink
 
-Quatro valores variam por máquina — protocolo de imagem, path absoluto do logo, largura e altura em células. Então o repo guarda só `config.jsonc.tmpl`, com os placeholders `@LOGO_TYPE@`, `@LOGO_PATH@`, `@LOGO_W@` e `@LOGO_H@`, e `install-menu.sh` (ação "fastfetch") gera o arquivo real em `~/.config/fastfetch/config.jsonc`. Symlinkar geraria diff de git a cada troca de máquina.
+Cinco valores variam por máquina — protocolo de imagem, path absoluto do logo, largura e altura em células, ícone de SO. Então o repo guarda só os `.tmpl`, com os placeholders `@LOGO_TYPE@`, `@LOGO_PATH@`, `@LOGO_W@`, `@LOGO_H@` e `@OS_ICON@`, e `install-menu.sh` (ação "fastfetch") gera os arquivos reais em `~/.config/fastfetch/{config,full}.jsonc`. Symlinkar geraria diff de git a cada troca de máquina.
+
+A altura do logo é **medida, não configurada**: o install gera os configs, roda `fastfetch --logo none | wc -l` pra saber quantas linhas os módulos imprimem nesta máquina, e regenera o sixel nessa altura. Sem isso sobra vão em branco entre a imagem e o prompt, porque módulo que não encontra nada (`DE` no Windows, `battery`/`poweradapter` num desktop) não imprime linha alguma — e quanto disso acontece só a máquina sabe. `FASTFETCH_LOGO_ROWS` é só o palpite inicial e o fallback se a medição falhar.
+
+Trocar a imagem: `FASTFETCH_LOGO_IMG`, com o nome de um arquivo de `images/`. A largura acompanha pela proporção.
 
 | Plataforma | `logo.type` | `logo.source` |
 |---|---|---|

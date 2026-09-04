@@ -37,7 +37,7 @@ KDE Plasma 6 + kitty + fish/starship. `ricing/README.md` tem os comandos de rest
 | shell | bash/fish, mesmos aliases | `ricing/shell/{bash,fish}/` | Sim (bash); fish é `source`ado |
 | lsd (`ls`) | mesma paleta do starship (degradê roxo→azul), pastas primeiro alfabético | `ricing/shell/lsd/{config.yaml,colors.yaml}` (metadado) + `LS_COLORS` (nome/ext) duplicado em `{bash,fish}/` — export difere por shell | Sim |
 | prompt | Starship, preset `gruvbox-rainbow` (bash+fish, tema não exclusivo de shell) | `ricing/shell/starship/linux.toml` | Sim (`~/.config/starship.toml`) |
-| fastfetch | logo `images/165.png`, presets de terceiros | `ricing/fastfetch/` (`config.jsonc.tmpl`, `images/`, `presets/`) | `images/`/`presets/` sim; `config.jsonc` não — gerado do `.tmpl` (`@LOGO_TYPE@`/`@LOGO_PATH@`/`@LOGO_W@`/`@LOGO_H@`: `sixel` no WSL, `kitty` em kitty nativo, `raw` no Windows; ver `install-menu.sh`) |
+| fastfetch | logo `images/165.png`, presets de terceiros, 2 perfis (`fastfetch` enxuto / `fastfetch --full`, atalho de função de shell pra `--config full`) | `ricing/fastfetch/` (`config.jsonc.tmpl`, `images/`, `presets/`) | `images/`/`presets/` sim; `{config,full}.jsonc` não — gerados dos `.tmpl` (`@LOGO_TYPE@`/`@LOGO_PATH@`/`@LOGO_W@`/`@LOGO_H@`/`@OS_ICON@`: `sixel` no WSL, `kitty` em kitty nativo, `raw` no Windows; ver `install-menu.sh`) |
 | GRUB | boot silencioso (sem menu/mensagens) | `ricing/grub/silent-boot.sh` | Não, script `sudo` |
 | git | assinatura SSH (`gpg.format=ssh`) | `ricing/shell/git/.gitconfig` | Sim |
 | WezTerm (Windows) | Catppuccin Mocha, WebGpu, tab bar embaixo | `ricing/terminal/wezterm/wezterm.lua` | Não, copiado |

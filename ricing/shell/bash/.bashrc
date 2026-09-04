@@ -125,6 +125,24 @@ alias mirrors='sysup mirrors'
 alias tidewave='sysup tidewave'
 
 # ---------------------------
+# FASTFETCH
+# ---------------------------
+# `fastfetch --full` mostra tudo (host, board, bios, disco, som, IP...); sem
+# argumento mostra o perfil enxuto. `--full` não é flag do fastfetch, é atalho
+# pro segundo config gerado pelo install-menu.sh.
+fastfetch() {
+  local a args=()
+  for a in "$@"; do
+    if [[ "$a" == "--full" ]]; then
+      args+=(--config full)
+    else
+      args+=("$a")
+    fi
+  done
+  command fastfetch "${args[@]}"
+}
+
+# ---------------------------
 # NGROK
 # ---------------------------
 alias ngrok.start='ngrok http 4000 --url https://candeia.ngrok.app'
