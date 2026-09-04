@@ -118,7 +118,7 @@ is_wsl() { grep -qi microsoft /proc/version 2>/dev/null || [[ -n "${WSL_DISTRO_N
 # oficial entrega CORE_RL_MagickCore_.dll do 7.1.2 — renomear tira o "library
 # not found" mas cai em "Failed to load / convert", porque a ABI difere. `iterm`
 # só serve pro WezTerm (o Windows Terminal não fala iTerm2, imprime um "m"
-# solto). Solução: converter com o magick.exe e imprimir o .sixel com
+# solto). Solução: converter com o chafa e imprimir o .sixel com
 # `--logo-type raw`, que despeja o arquivo byte a byte. `file-raw` NÃO serve:
 # trata o arquivo como linhas de texto e injeta escapes no meio do blob DCS,
 # embaralhando a tela. Como o WezTerm também renderiza sixel, `raw` cobre os
@@ -152,53 +152,72 @@ fastfetch_os_icon() {
   fi
 }
 
-# find_magick — path do magick. O instalador oficial do Windows não coloca o
-# diretório no PATH do Git Bash, então cai pro Program Files.
-find_magick() {
-  local m
-  if command -v magick >/dev/null 2>&1; then
-    command -v magick
-    return 0
-  fi
-  for m in /c/Program\ Files/ImageMagick-*/magick.exe; do
-    [[ -x "$m" ]] && { echo "$m"; return 0; }
-  done
-  return 1
-}
-
-# render_sixel_logo <png> <rows> — converte o PNG pra sixel com o magick e ecoa
-# o path do .sixel. Falha (status 1) se o magick não existir.
+# render_sixel_logo <png> <rows> — converte o PNG pra sixel com o chafa e ecoa
+# `<path> <largura_px> <altura_px>`. Falha (status 1) se o chafa não existir ou
+# a conversão der errado.
+#
+# chafa e não ImageMagick: sixel não tem canal alpha, e o magick achata os
+# pixels transparentes numa cor (branco por padrão, daí a borda serrilhada;
+# achatar na cor do terminal troca a borda por um retângulo opaco, que aparece
+# porque o terminal usa opacity 80). O chafa aproveita o `P2=1` do header DCS,
+# que deixa pixel não pintado transparente de verdade — o fundo do terminal
+# atravessa. Verificado decodificando o blob: chafa pinta ~60% da área, o
+# magick pinta 100%.
 #
 # A altura em px tem que casar com a grade do terminal, senão o texto do
 # fastfetch sobrepõe a imagem: `raw` não sabe o tamanho do blob, só reserva as
-# células que a config declarar.
+# células que a config declarar. O chafa dimensiona em células assumindo uma
+# célula própria (não detecta a real quando a saída é um arquivo), então quem
+# manda são as dimensões em px que ele grava no header — é de lá que sai a
+# reserva, não de cálculo nosso.
 render_sixel_logo() {
-  local png="$1" rows="$2" magick src dst out
+  local png="$1" rows="$2" out src attrs
   out="$HOME/.config/fastfetch/${FASTFETCH_LOGO_IMG%.*}.sixel"
-  magick="$(find_magick)" || return 1
+  command -v chafa >/dev/null 2>&1 || return 1
   src="$png"
-  dst="$out"
-  # magick.exe é binário nativo: o auto-translate de path do MSYS não alcança o
-  # argumento de saída por causa do prefixo `sixel:`, então traduz na mão.
-  if is_windows; then
-    src="$(cygpath -m "$png")"
-    dst="$(cygpath -m "$out")"
-  fi
-  "$magick" "$src" -resize "x$((rows * FASTFETCH_CELL_PX_H))" -colors 256 "sixel:$dst" 2>/dev/null || return 1
+  is_windows && src="$(cygpath -m "$png")"
+
+  # Largura folgada de propósito: a altura é que limita, e a proporção da imagem
+  # decide o resto. --polite/--animate desligam sequências de controle que só
+  # fazem sentido em terminal ao vivo.
+  # `--colors full` e não 256: no chafa, 256 significa a paleta FIXA do xterm
+  # (#0=0,0,0 #1=50,0,0 #2=0,43,0...), que não tem os tons da imagem e enche
+  # tudo de chuvisco por mais dither que se aplique. `full` faz ele montar uma
+  # paleta pra esta imagem — o sixel ainda cabe nos 256 registradores, só que
+  # com as cores certas. Com paleta boa o dither deixa de ser necessário.
+  chafa --format sixel --size "200x$rows" \
+    --colors full --dither none \
+    --polite on --animate off "$src" > "$out" 2>/dev/null || return 1
   [[ -s "$out" ]] || return 1
-  echo "$out"
+
+  # Raster attributes do header: `"<pan>;<pad>;<largura>;<altura>`.
+  attrs="$(head -c 64 "$out" | tr -d '\0' | sed -n 's/.*"[0-9]*;[0-9]*;\([0-9]*\);\([0-9]*\).*/\1 \2/p')"
+  [[ -n "$attrs" ]] || return 1
+  echo "$out $attrs"
 }
 
-# Célula do terminal em px (JetBrainsMono NF 11pt no Windows Terminal ≈ 9x18).
-# Usado só pra dimensionar o sixel; erro aqui aparece como imagem cortada ou
-# texto por cima dela.
-FASTFETCH_CELL_PX_W=9
-FASTFETCH_CELL_PX_H=18
+# Célula do terminal em px — 10x20 pro JetBrainsMono NF no tamanho padrão do
+# Windows Terminal. Usado só pra dimensionar o sixel: valor pequeno demais deixa
+# vão em branco entre a imagem e o prompt, grande demais faz o texto passar por
+# cima da imagem.
+#
+# Medir num terminal novo (fonte ou tamanho diferente muda isso) — a resposta
+# vem como ESC[6;<altura>;<largura>t:
+#
+#   $e=[char]27; [Console]::Write("$e[16t"); Start-Sleep -Milliseconds 300
+#   $s=''; while([Console]::KeyAvailable){ $s += [Console]::ReadKey($true).KeyChar }; $s
+FASTFETCH_CELL_PX_W=10
+FASTFETCH_CELL_PX_H=20
 
 # Logo: nome de um arquivo em ricing/fastfetch/images/. Trocar a imagem = trocar
 # esta linha e rodar a ação "fastfetch" do menu; o resto (sixel, largura,
 # altura) é recalculado.
 FASTFETCH_LOGO_IMG=165.png
+
+# Altura do logo em linhas do terminal — é o tamanho da imagem. Manter próximo
+# do número de linhas que os módulos imprimem, senão sobra vão em branco entre
+# a última linha e o prompt (a imagem é mais alta que o texto).
+FASTFETCH_LOGO_ROWS=18
 
 # render_fastfetch_config — gera (não symlinka) ~/.config/fastfetch/config.jsonc
 # a partir do template do repo, substituindo @LOGO_TYPE@ pelo protocolo certo e
@@ -213,22 +232,20 @@ render_fastfetch_config() {
   png="$HOME/.config/fastfetch/images/$FASTFETCH_LOGO_IMG"
   logo_path="$png"
   logo_w=40
-  logo_h=20
+  logo_h="$FASTFETCH_LOGO_ROWS"
 
   if [[ "$logo_type" == "raw" ]]; then
-    if sixel="$(render_sixel_logo "$png" "$logo_h")"; then
+    local px_w px_h
+    if read -r sixel px_w px_h < <(render_sixel_logo "$png" "$logo_h") && [[ -n "$px_h" ]]; then
       logo_path="$sixel"
-      # Largura em células a partir do aspect ratio real: o sixel foi
-      # redimensionado por altura, então a largura em px é w/h * altura.
-      local px_w px_h magick png_native
-      magick="$(find_magick)"
-      png_native="$png"
-      is_windows && png_native="$(cygpath -m "$png")"
-      read -r px_w px_h < <("$magick" identify -format '%w %h' "$png_native")
-      logo_w=$(((px_w * logo_h * FASTFETCH_CELL_PX_H / px_h + FASTFETCH_CELL_PX_W - 1) / FASTFETCH_CELL_PX_W))
+      # Reserva em células arredondada pra cima a partir das dimensões que o
+      # chafa gravou no header — arredondar pra baixo deixaria o texto ou o
+      # prompt por cima da última faixa da imagem.
+      logo_w=$(((px_w + FASTFETCH_CELL_PX_W - 1) / FASTFETCH_CELL_PX_W))
+      logo_h=$(((px_h + FASTFETCH_CELL_PX_H - 1) / FASTFETCH_CELL_PX_H))
     else
-      log_warn "magick.exe não encontrado — sem ele não dá pra converter o logo pra sixel"
-      log_dim "instale com: winget install ImageMagick.ImageMagick"
+      log_warn "chafa não encontrado — sem ele não dá pra converter o logo pra sixel"
+      log_dim "instale com: winget install hpjansson.Chafa"
       logo_type=builtin
     fi
   fi
@@ -261,6 +278,8 @@ action_fastfetch() {
   log_step "fastfetch"
   winget_install_if_missing fastfetch Fastfetch-cli.Fastfetch
   need fastfetch
+  # Converte o logo pra sixel preservando transparência (ver render_sixel_logo).
+  is_windows && winget_install_if_missing chafa hpjansson.Chafa
   # images/ antes do config: render_fastfetch_config lê o PNG pra converter em
   # sixel e medir o aspect ratio.
   backup_and_link "$REPO_DIR/ricing/fastfetch/images" "$HOME/.config/fastfetch/images"

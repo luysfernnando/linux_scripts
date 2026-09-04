@@ -128,7 +128,7 @@ Quatro valores variam por máquina — protocolo de imagem, path absoluto do log
 |---|---|---|
 | kitty nativo | `kitty` | `images/165.png` |
 | WSL | `sixel` | `images/165.png` |
-| Windows (Terminal e WezTerm) | `raw` | `165.sixel`, pré-convertido pelo `magick` no install |
+| Windows (Terminal e WezTerm) | `raw` | `165.sixel`, pré-convertido pelo `chafa` no install |
 
 `fastfetch --show-errors` mostra o erro real quando a imagem não aparece.
 
@@ -136,12 +136,21 @@ Quatro valores variam por máquina — protocolo de imagem, path absoluto do log
 
 O `--logo-type sixel` do fastfetch não funciona no Windows nativo: ele carrega o ImageMagick pedindo `libMagickCore-7.Q16HDRI-10.dll` (naming do MSYS2, ABI do 7.1.1) e o instalador oficial entrega `CORE_RL_MagickCore_.dll` do 7.1.2. Renomear tira o `Image Magick library not found`, mas cai em `Failed to load / convert the image source`, porque a ABI difere. Montar as DLLs mingw da versão certa também não resolve (as libs atuais não são contemporâneas do 7.1.1 — dá `WinError 127`).
 
-A saída é converter fora do fastfetch: `render_sixel_logo` no `install-menu.sh` chama o `magick.exe` (esse funciona) pra gerar `~/.config/fastfetch/165.sixel`, e o `logo.type` fica `raw`, que despeja o arquivo byte a byte. Como o WezTerm também renderiza sixel, `raw` cobre os dois terminais.
+A saída é converter fora do fastfetch: `render_sixel_logo` no `install-menu.sh` gera `~/.config/fastfetch/165.sixel`, e o `logo.type` fica `raw`, que despeja o arquivo byte a byte. Como o WezTerm também renderiza sixel, `raw` cobre os dois terminais.
 
-Duas armadilhas:
+Três armadilhas:
 
 - **`file-raw` não serve** — trata o arquivo como linhas de texto e injeta escapes no meio do blob DCS, embaralhando a tela em listras. Tem que ser `raw`.
-- **`width`/`height` são só reserva de espaço** — `raw` não sabe o tamanho do blob. Se não casarem com o sixel, o texto sobrepõe a imagem. O install calcula a largura pelo aspect ratio real (`magick identify`) e pela célula do terminal (`FASTFETCH_CELL_PX_W`/`_H`, ≈9x18 pra JetBrainsMono NF 11pt).
+- **`width`/`height` são só reserva de espaço** — `raw` não sabe o tamanho do blob. Se não casarem com o sixel, o texto sobrepõe a imagem ou sobra vão em branco até o prompt. A reserva sai das dimensões em px que o conversor grava nos raster attributes do header, divididas pela célula do terminal (`FASTFETCH_CELL_PX_W`/`_H`).
+- **A célula é medida, não estimada** — chutar esse valor foi a causa do vão em branco. Num terminal novo (fonte ou tamanho diferente muda), medir com `ESC[16t`, que responde `ESC[6;<altura>;<largura>t`. No Windows Terminal com JetBrainsMono NF no tamanho padrão: 20x10.
+
+#### O conversor é o chafa, não o ImageMagick
+
+Sixel não tem canal alpha, e o ImageMagick achata os pixels transparentes numa cor: branco por padrão (borda serrilhada em volta do logo), e achatar na cor do terminal só troca isso por um retângulo opaco, que aparece porque o perfil usa `opacity: 80`.
+
+O chafa aproveita o `P2=1` do header DCS, que faz pixel não pintado ficar transparente de verdade. Verificável decodificando o blob: o chafa pinta ~60% da área, o ImageMagick pinta 100%.
+
+Uma pegadinha no chafa: **`--colors 256` não quer dizer "256 cores", quer dizer "a paleta fixa de 256 do xterm"** — cubo 6x6x6 de tons genéricos, sem nenhuma cor da imagem, o que enche tudo de chuvisco por mais dither que se aplique. `--colors full` faz ele montar a paleta a partir da imagem (ainda cabe nos 256 registradores do sixel), e com paleta boa o dither deixa de ser necessário (`--dither none`).
 
 ### Restaurar
 
@@ -149,7 +158,7 @@ Duas armadilhas:
 ./install-menu.sh   # "fastfetch (config gerado + symlink)" — detecta a plataforma sozinho
 ```
 
-No Windows precisa do ImageMagick antes: `winget install ImageMagick.ImageMagick`. O install acha o `magick.exe` no `Program Files` mesmo sem ele estar no PATH do Git Bash.
+No Windows o install instala o `chafa` sozinho via winget (`hpjansson.Chafa`).
 
 WezTerm (build 2024-02) não renderiza o placeholder unicode do protocolo `kitty` (aparece `⸮` no lugar da imagem) — daí o Linux usar `kitty` só em kitty nativo. Remover o módulo `disk` se quiser esconder discos (vários drives montados no Windows poluem a saída).
 
